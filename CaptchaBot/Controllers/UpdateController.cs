@@ -9,7 +9,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace CaptchaBot.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/captchaupdate")]
     public class UpdateController : Controller
     {
         private readonly ITelegramBotClient _telegramBot;
