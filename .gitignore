@@ -339,3 +339,4 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 /CaptchaBot/appsettings.json
+/CaptchaBot/Configuration/appsettings.json
