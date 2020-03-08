@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  captchabot:
+    image: imoutochan/captchabot:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: always
+    volumes:
+      - ./logs:/app/logs
+      - ./Configuration:/app/Configuration
+    ports:
+      - "127.0.0.1:41460:4430"
