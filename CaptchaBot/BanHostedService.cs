@@ -48,6 +48,7 @@ namespace CaptchaBot
             {
                 await _telegramBot.KickChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1));
                 await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId);
+                await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId);
                 _usersStore.Remove(newUser);
             }
         }

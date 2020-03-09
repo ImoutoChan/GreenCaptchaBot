@@ -53,8 +53,9 @@ namespace CaptchaBot.Services
                     true);
             }
 
-            _usersStore.Remove(user);
             await _telegramBot.DeleteMessageAsync(user.ChatId, user.InviteMessageId);
+            await _telegramBot.DeleteMessageAsync(user.ChatId, user.JoinMessageId);
+            _usersStore.Remove(user);
         }
 
         public async Task ProcessNewChatMember(Message message)
