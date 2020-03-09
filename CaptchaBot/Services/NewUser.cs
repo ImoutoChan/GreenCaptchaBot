@@ -11,15 +11,18 @@ namespace CaptchaBot.Services
         public DateTimeOffset JoinDateTime { get; }
 
         public int InviteMessageId { get; }
+        
+        public int JoinMessageId { get; }
 
         public int CorrectAnswer { get; }
 
-        public NewUser(long chatId, int id, DateTimeOffset joinDateTime, int inviteMessageId, int correctAnswer)
+        public NewUser(long chatId, int id, DateTimeOffset joinDateTime, int inviteMessageId, int joinMessageId, int correctAnswer)
         {
             ChatId = chatId;
             Id = id;
             JoinDateTime = joinDateTime;
             InviteMessageId = inviteMessageId;
+            JoinMessageId = joinMessageId;
             CorrectAnswer = correctAnswer;
         }
     }

@@ -18,7 +18,7 @@ namespace CaptchaBot.Services
         public void Add(User user, Message message, int sentMessageId, int answer)
         {
             var key = new ChatUser(message.Chat.Id, user.Id);
-            var newValue = new NewUser(message.Chat.Id, user.Id, DateTimeOffset.Now, sentMessageId, answer);
+            var newValue = new NewUser(message.Chat.Id, user.Id, DateTimeOffset.Now, sentMessageId, message.MessageId, answer);
 
             _users.AddOrUpdate(key, newValue, (chatUser, newUser) => newValue);
         }
