@@ -11,14 +11,14 @@ namespace CaptchaBot
 {
     public class BanHostedService : IHostedService
     {
-        private Timer _timer;
-        private readonly IUsersStore _usersStore;
         private readonly ILogger<BanHostedService> _logger;
         private readonly ITelegramBotClient _telegramBot;
+        private readonly IUsersStore _usersStore;
+        private Timer _timer;
 
         public BanHostedService(
-            IUsersStore usersStore, 
-            ILogger<BanHostedService> logger, 
+            IUsersStore usersStore,
+            ILogger<BanHostedService> logger,
             ITelegramBotClient telegramBot)
         {
             _usersStore = usersStore;
@@ -29,6 +29,12 @@ namespace CaptchaBot
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _timer = new Timer(async x => await BanSlowUsers(), null, 0, 10000);
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _timer?.Change(Timeout.Infinite, 0);
             return Task.CompletedTask;
         }
 
@@ -50,14 +56,12 @@ namespace CaptchaBot
                 await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId);
                 await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId);
                 _usersStore.Remove(newUser);
-            }
-        }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            //New Timer does not have a stop. 
-            _timer?.Change(Timeout.Infinite, 0);
-            return Task.CompletedTask;
+                _logger.LogInformation(
+                    "User {UserId} with name {UserName} was banned after one minute silence.",
+                    newUser.Id,
+                    newUser.PrettyUserName);
+            }
         }
     }
 }

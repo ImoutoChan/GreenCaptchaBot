@@ -15,29 +15,36 @@ namespace CaptchaBot.Services
             _users = new ConcurrentDictionary<ChatUser, NewUser>();
         }
 
-        public void Add(User user, Message message, int sentMessageId, int answer)
+        public void Add(User user, Message message, int sentMessageId, string prettyUserName, int answer)
         {
             var key = new ChatUser(message.Chat.Id, user.Id);
-            var newValue = new NewUser(message.Chat.Id, user.Id, DateTimeOffset.Now, sentMessageId, message.MessageId, answer);
+            var newValue = new NewUser(
+                message.Chat.Id,
+                user.Id,
+                DateTimeOffset.Now,
+                sentMessageId,
+                message.MessageId,
+                prettyUserName,
+                answer);
 
             _users.AddOrUpdate(key, newValue, (chatUser, newUser) => newValue);
         }
 
-        public IReadOnlyCollection<NewUser> GetAll() => _users.Values.ToArray();
+        public IReadOnlyCollection<NewUser> GetAll()
+        {
+            return _users.Values.ToArray();
+        }
 
         public NewUser Get(long chatId, int userId)
         {
-            if (_users.TryGetValue(new ChatUser(chatId, userId), out var newUser))
-            {
-                return newUser;
-            }
+            if (_users.TryGetValue(new ChatUser(chatId, userId), out var newUser)) return newUser;
 
             return null;
         }
 
         public void Remove(NewUser user)
         {
-            _users.TryRemove(new ChatUser(user.ChatId, user.Id), out var _);
+            _users.TryRemove(new ChatUser(user.ChatId, user.Id), out _);
         }
     }
 }

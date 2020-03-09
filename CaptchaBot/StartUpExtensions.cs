@@ -7,7 +7,7 @@ using Telegram.Bot;
 
 namespace CaptchaBot
 {
-    public static class StartUpExtensions
+    public static class StartupExtensions
     {
         public static IApplicationBuilder UseTelegramBotWebhook(this IApplicationBuilder applicationBuilder)
         {

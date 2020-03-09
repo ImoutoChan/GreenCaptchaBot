@@ -24,22 +24,30 @@ namespace CaptchaBot.Services
         
         public async Task ProcessCallback(CallbackQuery query)
         {
-            var user = _usersStore.Get(query.Message.Chat.Id, query.From.Id);
+            var unauthorizedUser = _usersStore.Get(query.Message.Chat.Id, query.From.Id);
 
-            if (user == null)
+            if (unauthorizedUser == null)
             {
-                _logger.LogInformation("User {UserId} not found", query.From.Id);
+                _logger.LogInformation("User with id {UserId} not found", query.From.Id);
                 return;
             }
 
-            var userAnswer = Int32.Parse(query.Data);
+            var unauthorizedUserAnswer = int.Parse(query.Data);
 
-            if (userAnswer != user.CorrectAnswer)
+            if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
             {
                 await _telegramBot.KickChatMemberAsync(
                     query.Message.Chat.Id,
                     query.From.Id,
                     DateTime.Now.AddDays(1));
+
+                _logger.LogInformation(
+                    "User {UserId} with name {UserName} was banned after incorrect answer {UserAnswer}, " +
+                    "while correct one is {CorrectAnswer}.",
+                    unauthorizedUser.Id,
+                    unauthorizedUser.PrettyUserName,
+                    unauthorizedUserAnswer,
+                    unauthorizedUser.CorrectAnswer);
             }
             else
             {
@@ -51,16 +59,22 @@ namespace CaptchaBot.Services
                     true,
                     true,
                     true);
+
+                _logger.LogInformation(
+                    "User {UserId} with name {UserName} was authorized with answer {UserAnswer}.",
+                    unauthorizedUser.Id,
+                    unauthorizedUser.PrettyUserName,
+                    unauthorizedUserAnswer);
             }
 
-            await _telegramBot.DeleteMessageAsync(user.ChatId, user.InviteMessageId);
-            await _telegramBot.DeleteMessageAsync(user.ChatId, user.JoinMessageId);
-            _usersStore.Remove(user);
+            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId);
+            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId);
+            _usersStore.Remove(unauthorizedUser);
         }
 
         public async Task ProcessNewChatMember(Message message)
         {
-            foreach (var messageNewChatMember in message.NewChatMembers)
+            foreach (var unauthorizedUser in message.NewChatMembers)
             {
                 var answer = GetRandomNumber();
 
@@ -73,14 +87,23 @@ namespace CaptchaBot.Services
                     false,
                     false);
 
+                var prettyUserName = GetPrettyName(unauthorizedUser);
+
                 var sentMessage = await _telegramBot
                     .SendTextMessageAsync(
                         message.Chat.Id, 
-                        $"Привет, {GetPrettyName(messageNewChatMember)}, нажми кнопку {answer}, чтобы тебя не забанили!", 
+                        $"Привет, {prettyUserName}, нажми кнопку {answer}, чтобы тебя не забанили!", 
                         replyToMessageId: message.MessageId, 
                         replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
-                _usersStore.Add(messageNewChatMember, message, sentMessage.MessageId, answer);
+                _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer);
+
+                
+                _logger.LogInformation(
+                    "The new user {UserId} with name {UserName} was detected and trialed. " +
+                    "He has one minute to answer.",
+                    unauthorizedUser.Id,
+                    prettyUserName);
             }
         }
 

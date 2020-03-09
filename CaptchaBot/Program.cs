@@ -14,9 +14,17 @@ namespace CaptchaBot
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostingContext, config) 
-                    => config.AddJsonFile("Configuration/appsettings.json", optional: true, reloadOnChange: true))
+                .ConfigureAppConfiguration(
+                    (hostingContext, config)
+                        => config.AddJsonFile("Configuration/appsettings.json", optional: false, reloadOnChange: true))
                 .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>())
-                .ConfigureServices(services => services.AddHostedService<BanHostedService>());
+                .ConfigureServices(services => services.AddHostedService<BanHostedService>())
+                .ConfigureSerilog(
+                    (logger, config)
+                        => logger
+                            .WithoutDefaultLoggers()
+                            .WithConsole()
+                            .WithAllRollingFile()
+                            .WithInformationRollingFile());
     }
 }
