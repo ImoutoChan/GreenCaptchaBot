@@ -10,6 +10,20 @@ namespace CaptchaBot.Services
 {
     public class WelcomeService : IWelcomeService
     {
+        private static readonly string[] NumberTexts =
+        {
+            "ноль",
+            "один",
+            "два",
+            "три",
+            "четыре",
+            "пять",
+            "шесть",
+            "семь",
+            "восемь",
+        };
+
+        private const int ButtonsCount = 8;
         private static readonly Random Random = new Random();
         private readonly IUsersStore _usersStore;
         private readonly ILogger<WelcomeService> _logger;
@@ -92,7 +106,7 @@ namespace CaptchaBot.Services
                 var sentMessage = await _telegramBot
                     .SendTextMessageAsync(
                         message.Chat.Id, 
-                        $"Привет, {prettyUserName}, нажми кнопку {answer}, чтобы тебя не забанили!", 
+                        $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!", 
                         replyToMessageId: message.MessageId, 
                         replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
@@ -106,6 +120,8 @@ namespace CaptchaBot.Services
                     prettyUserName);
             }
         }
+
+        private static string GetText(in int answer) => NumberTexts[answer];
 
         private static string GetPrettyName(User messageNewChatMember)
         {
@@ -121,16 +137,15 @@ namespace CaptchaBot.Services
             return string.Join(" ", names);
         }
 
-        private static int GetRandomNumber() => Random.Next(1, 4);
+        private static int GetRandomNumber() => Random.Next(1, ButtonsCount + 1);
 
-        private IEnumerable<InlineKeyboardButton> GetKeyboardButtons()
+        private static IEnumerable<InlineKeyboardButton> GetKeyboardButtons()
         {
-            return new[]
+            for (int i = 1; i <= ButtonsCount; i++)
             {
-                InlineKeyboardButton.WithCallbackData("1", "1"),
-                InlineKeyboardButton.WithCallbackData("2", "2"),
-                InlineKeyboardButton.WithCallbackData("3", "3")
-            };
+                var label = i.ToString();
+                yield return InlineKeyboardButton.WithCallbackData(label, label);
+            }
         }
     }
 }
