@@ -106,7 +106,7 @@ namespace CaptchaBot.Services
 
                 await _telegramBot.RestrictChatMemberAsync(
                     message.Chat.Id,
-                    message.From.Id,
+                    unauthorizedUser.Id,
                     DateTime.Now.AddDays(1),
                     false,
                     false,

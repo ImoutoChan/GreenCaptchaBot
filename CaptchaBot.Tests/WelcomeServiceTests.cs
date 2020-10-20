@@ -35,14 +35,14 @@ namespace CaptchaBot.Tests
             )).ReturnsAsync(new Message());
         }
 
-        private static Task ProcessNewChatMember(WelcomeService service, int userId, DateTime enterTime)
+        private static Task ProcessNewChatMember(WelcomeService service, int userId, DateTime enterTime, int fromId = 0)
         {
             var testUser = new User {Id = userId}; 
             var message = new Message
             {
                 Date = enterTime,
                 Chat = new Chat(),
-                From = new User(),
+                From = new User {Id = fromId},
                 NewChatMembers = new[]
                 {
                     testUser
@@ -78,6 +78,27 @@ namespace CaptchaBot.Tests
             
             Assert.Empty(_botMock.Invocations);
             Assert.Empty(_usersStore.GetAll());
+        }
+
+        [Fact]
+        public async Task BotShouldRestrictTheEnteringUserAndNotTheMessageAuthor()
+        {
+            var config = new AppSettings();
+            var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+
+            const int enteringUserId = 123;
+            const int invitingUserId = 345;
+            
+            await ProcessNewChatMember(welcomeService, enteringUserId, DateTime.UtcNow, invitingUserId);
+            
+            Assert.Collection(_botMock.Invocations,
+                restrict =>
+                {
+                    Assert.Equal(nameof(ITelegramBotClient.RestrictChatMemberAsync), restrict.Method.Name);
+                    var restrictedUserId = (int)restrict.Arguments[1];
+                    Assert.Equal(enteringUserId, restrictedUserId);
+                },
+                _ => {});
         }
     }
 }
