@@ -25,12 +25,14 @@ namespace CaptchaBot.Services
 
         private const int ButtonsCount = 8;
         private static readonly Random Random = new Random();
+        private readonly AppSettings _settings;
         private readonly IUsersStore _usersStore;
         private readonly ILogger<WelcomeService> _logger;
         private readonly ITelegramBotClient _telegramBot;
 
-        public WelcomeService(IUsersStore usersStore, ILogger<WelcomeService> logger, ITelegramBotClient telegramBot)
+        public WelcomeService(AppSettings settings, IUsersStore usersStore, ILogger<WelcomeService> logger, ITelegramBotClient telegramBot)
         {
+            _settings = settings;
             _usersStore = usersStore;
             _logger = logger;
             _telegramBot = telegramBot;
@@ -88,6 +90,16 @@ namespace CaptchaBot.Services
 
         public async Task ProcessNewChatMember(Message message)
         {
+            var freshness = DateTime.UtcNow - message.Date.ToUniversalTime();
+            if (freshness > _settings.ProcessEventTimeout)
+            {
+                _logger.LogInformation(
+                    "Message about {NewChatMembers} received {Freshness} ago and ignored",
+                    message.NewChatMembers.Length,
+                    freshness);
+                return;
+            }
+            
             foreach (var unauthorizedUser in message.NewChatMembers)
             {
                 var answer = GetRandomNumber();
