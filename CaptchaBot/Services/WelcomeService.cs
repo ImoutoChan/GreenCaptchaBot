@@ -70,11 +70,17 @@ namespace CaptchaBot.Services
                 await _telegramBot.RestrictChatMemberAsync(
                     query.Message.Chat.Id,
                     query.From.Id,
-                    default,
-                    true,
-                    true,
-                    true,
-                    true);
+                    new ChatPermissions
+                    {
+                        CanAddWebPagePreviews = true,
+                        CanChangeInfo = true,
+                        CanInviteUsers = true,
+                        CanPinMessages = true,
+                        CanSendMediaMessages = true,
+                        CanSendMessages = true,
+                        CanSendOtherMessages = true,
+                        CanSendPolls = true
+                    });
 
                 _logger.LogInformation(
                     "User {UserId} with name {UserName} was authorized with answer {UserAnswer}.",
@@ -107,11 +113,18 @@ namespace CaptchaBot.Services
                 await _telegramBot.RestrictChatMemberAsync(
                     message.Chat.Id,
                     unauthorizedUser.Id,
-                    DateTime.Now.AddDays(1),
-                    false,
-                    false,
-                    false,
-                    false);
+                    new ChatPermissions
+                    {
+                        CanAddWebPagePreviews = false,
+                        CanChangeInfo = false,
+                        CanInviteUsers = false,
+                        CanPinMessages = false,
+                        CanSendMediaMessages = false,
+                        CanSendMessages = false,
+                        CanSendOtherMessages = false,
+                        CanSendPolls = false
+                    },
+                    DateTime.Now.AddDays(1));
 
                 var prettyUserName = GetPrettyName(unauthorizedUser);
 
