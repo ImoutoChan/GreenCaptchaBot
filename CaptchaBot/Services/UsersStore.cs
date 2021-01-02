@@ -15,7 +15,13 @@ namespace CaptchaBot.Services
             _users = new ConcurrentDictionary<ChatUser, NewUser>();
         }
 
-        public void Add(User user, Message message, int sentMessageId, string prettyUserName, int answer)
+        public void Add(
+            User user,
+            Message message,
+            int sentMessageId,
+            string prettyUserName,
+            int answer,
+            ChatMember chatMember)
         {
             var key = new ChatUser(message.Chat.Id, user.Id);
             var newValue = new NewUser(
@@ -25,7 +31,8 @@ namespace CaptchaBot.Services
                 sentMessageId,
                 message.MessageId,
                 prettyUserName,
-                answer);
+                answer,
+                chatMember);
 
             _users.AddOrUpdate(key, newValue, (chatUser, newUser) => newValue);
         }

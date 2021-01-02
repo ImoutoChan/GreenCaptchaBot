@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -30,7 +31,11 @@ namespace CaptchaBot.Services
         private readonly ILogger<WelcomeService> _logger;
         private readonly ITelegramBotClient _telegramBot;
 
-        public WelcomeService(AppSettings settings, IUsersStore usersStore, ILogger<WelcomeService> logger, ITelegramBotClient telegramBot)
+        public WelcomeService(
+            AppSettings settings, 
+            IUsersStore usersStore, 
+            ILogger<WelcomeService> logger, 
+            ITelegramBotClient telegramBot)
         {
             _settings = settings;
             _usersStore = usersStore;
@@ -67,26 +72,32 @@ namespace CaptchaBot.Services
             }
             else
             {
+                var preBanPermissions = unauthorizedUser.ChatMember;
+
+                var postBanPermissions = new ChatPermissions
+                {
+                    CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews,
+                    CanChangeInfo = preBanPermissions.CanChangeInfo,
+                    CanInviteUsers = preBanPermissions.CanInviteUsers,
+                    CanPinMessages = preBanPermissions.CanPinMessages,
+                    CanSendMediaMessages = preBanPermissions.CanSendMediaMessages,
+                    CanSendMessages = preBanPermissions.CanSendMessages,
+                    CanSendOtherMessages = preBanPermissions.CanSendOtherMessages,
+                    CanSendPolls = preBanPermissions.CanSendPolls
+                };
+
                 await _telegramBot.RestrictChatMemberAsync(
                     query.Message.Chat.Id,
                     query.From.Id,
-                    new ChatPermissions
-                    {
-                        CanAddWebPagePreviews = true,
-                        CanChangeInfo = true,
-                        CanInviteUsers = true,
-                        CanPinMessages = true,
-                        CanSendMediaMessages = true,
-                        CanSendMessages = true,
-                        CanSendOtherMessages = true,
-                        CanSendPolls = true
-                    });
+                    postBanPermissions);
 
                 _logger.LogInformation(
-                    "User {UserId} with name {UserName} was authorized with answer {UserAnswer}.",
+                    "User {UserId} with name {UserName} was authorized with answer {UserAnswer}. " +
+                    "With post ban permissions {PostBanPermissions}.",
                     unauthorizedUser.Id,
                     unauthorizedUser.PrettyUserName,
-                    unauthorizedUserAnswer);
+                    unauthorizedUserAnswer,
+                    JsonSerializer.Serialize(postBanPermissions));
             }
 
             await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId);
@@ -109,6 +120,11 @@ namespace CaptchaBot.Services
             foreach (var unauthorizedUser in message.NewChatMembers)
             {
                 var answer = GetRandomNumber();
+
+                var chatUser = await _telegramBot.GetChatMemberAsync(message.Chat.Id, unauthorizedUser.Id);
+
+                if (chatUser == null)
+                    return;
 
                 await _telegramBot.RestrictChatMemberAsync(
                     message.Chat.Id,
@@ -135,7 +151,7 @@ namespace CaptchaBot.Services
                         replyToMessageId: message.MessageId, 
                         replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
-                _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer);
+                _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer, chatUser);
 
                 
                 _logger.LogInformation(

@@ -1,4 +1,5 @@
 ﻿using System;
+using Telegram.Bot.Types;
 
 namespace CaptchaBot.Services
 {
@@ -17,6 +18,8 @@ namespace CaptchaBot.Services
         public string PrettyUserName { get; }
 
         public int CorrectAnswer { get; }
+        
+        public ChatMember ChatMember { get; }
 
         public NewUser(
             long chatId,
@@ -25,7 +28,8 @@ namespace CaptchaBot.Services
             int inviteMessageId,
             int joinMessageId,
             string prettyUserName,
-            int correctAnswer)
+            int correctAnswer,
+            ChatMember chatMember)
         {
             ChatId = chatId;
             Id = id;
@@ -34,6 +38,7 @@ namespace CaptchaBot.Services
             JoinMessageId = joinMessageId;
             PrettyUserName = prettyUserName;
             CorrectAnswer = correctAnswer;
+            ChatMember = chatMember;
         }
     }
 }

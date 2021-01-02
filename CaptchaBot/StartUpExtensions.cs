@@ -13,7 +13,7 @@ namespace CaptchaBot
         {
             var services = applicationBuilder.ApplicationServices;
 
-            var lifetime = services.GetService<IHostApplicationLifetime>();
+            var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
 
             lifetime.ApplicationStarted.Register(
                 async () =>
@@ -22,13 +22,13 @@ namespace CaptchaBot
                     var address = services.GetRequiredService<AppSettings>().WebHookAddress;
 
                     logger.LogInformation("Removing webhook");
-                    await services.GetService<ITelegramBotClient>().DeleteWebhookAsync();
+                    await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
 
                     logger.LogInformation($"Setting webhook to {address}");
-                    await services.GetService<ITelegramBotClient>().SetWebhookAsync(address, maxConnections: 5);
+                    await services.GetRequiredService<ITelegramBotClient>().SetWebhookAsync(address, maxConnections: 5);
                     logger.LogInformation($"Webhook is set to {address}");
 
-                    var webhookInfo = await services.GetService<ITelegramBotClient>().GetWebhookInfoAsync();
+                    var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
                     logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
                 });
 
@@ -37,7 +37,7 @@ namespace CaptchaBot
                 {
                     var logger = services.GetService<ILogger<Startup>>();
 
-                    services.GetService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
+                    services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
                     logger.LogInformation("Webhook removed");
                 });
 

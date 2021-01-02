@@ -5,7 +5,13 @@ namespace CaptchaBot.Services
 {
     public interface IUsersStore
     {
-        void Add(User user, Message message, int sentMessageId, string prettyUserName, int answer);
+        void Add(
+            User user,
+            Message message,
+            int sentMessageId,
+            string prettyUserName,
+            int answer,
+            ChatMember chatMember);
 
         IReadOnlyCollection<NewUser> GetAll();
 
