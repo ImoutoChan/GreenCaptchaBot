@@ -33,6 +33,11 @@ namespace CaptchaBot.Tests
                 It.IsAny<IReplyMarkup>(),
                 It.IsAny<CancellationToken>()
             )).ReturnsAsync(new Message());
+            _botMock.Setup(b => b.GetChatMemberAsync(
+                It.IsAny<ChatId>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()
+            )).ReturnsAsync(new ChatMember());
         }
 
         private static Task ProcessNewChatMember(WelcomeService service, int userId, DateTime enterTime, int fromId = 0)
@@ -61,6 +66,7 @@ namespace CaptchaBot.Tests
             await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow);
 
             Assert.Collection(_botMock.Invocations, 
+                getChatMember => Assert.Equal(nameof(ITelegramBotClient.GetChatMemberAsync), getChatMember.Method.Name),
                 restrict => Assert.Equal(nameof(ITelegramBotClient.RestrictChatMemberAsync), restrict.Method.Name),
                 sendMessage => Assert.Equal(nameof(ITelegramBotClient.SendTextMessageAsync), sendMessage.Method.Name));
             
@@ -92,6 +98,7 @@ namespace CaptchaBot.Tests
             await ProcessNewChatMember(welcomeService, enteringUserId, DateTime.UtcNow, invitingUserId);
             
             Assert.Collection(_botMock.Invocations,
+                _ => {},
                 restrict =>
                 {
                     Assert.Equal(nameof(ITelegramBotClient.RestrictChatMemberAsync), restrict.Method.Name);
