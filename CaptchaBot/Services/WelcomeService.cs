@@ -45,7 +45,8 @@ namespace CaptchaBot.Services
         
         public async Task ProcessCallback(CallbackQuery query)
         {
-            var unauthorizedUser = _usersStore.Get(query.Message.Chat.Id, query.From.Id);
+            var chatId = query.Message.Chat.Id;
+            var unauthorizedUser = _usersStore.Get(chatId, query.From.Id);
 
             if (unauthorizedUser == null)
             {
@@ -58,7 +59,7 @@ namespace CaptchaBot.Services
             if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
             {
                 await _telegramBot.KickChatMemberAsync(
-                    query.Message.Chat.Id,
+                    chatId,
                     query.From.Id,
                     DateTime.Now.AddDays(1));
 
@@ -74,20 +75,22 @@ namespace CaptchaBot.Services
             {
                 var preBanPermissions = unauthorizedUser.ChatMember;
 
+                var defaultPermissions = (await _telegramBot.GetChatAsync(chatId)).Permissions;
+
                 var postBanPermissions = new ChatPermissions
                 {
-                    CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews,
-                    CanChangeInfo = preBanPermissions.CanChangeInfo,
-                    CanInviteUsers = preBanPermissions.CanInviteUsers,
-                    CanPinMessages = preBanPermissions.CanPinMessages,
-                    CanSendMediaMessages = preBanPermissions.CanSendMediaMessages,
-                    CanSendMessages = preBanPermissions.CanSendMessages,
-                    CanSendOtherMessages = preBanPermissions.CanSendOtherMessages,
-                    CanSendPolls = preBanPermissions.CanSendPolls
+                    CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews ?? defaultPermissions?.CanAddWebPagePreviews ?? true,
+                    CanChangeInfo = preBanPermissions.CanChangeInfo ?? defaultPermissions?.CanChangeInfo ?? true,
+                    CanInviteUsers = preBanPermissions.CanInviteUsers ?? defaultPermissions?.CanInviteUsers ?? true,
+                    CanPinMessages = preBanPermissions.CanPinMessages ?? defaultPermissions?.CanPinMessages ?? true,
+                    CanSendMediaMessages = preBanPermissions.CanSendMediaMessages ?? defaultPermissions?.CanSendMediaMessages ?? true,
+                    CanSendMessages = preBanPermissions.CanSendMessages ?? defaultPermissions?.CanSendMessages ?? true,
+                    CanSendOtherMessages = preBanPermissions.CanSendOtherMessages ?? defaultPermissions?.CanSendOtherMessages ?? true,
+                    CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true
                 };
 
                 await _telegramBot.RestrictChatMemberAsync(
-                    query.Message.Chat.Id,
+                    chatId,
                     query.From.Id,
                     postBanPermissions);
 
