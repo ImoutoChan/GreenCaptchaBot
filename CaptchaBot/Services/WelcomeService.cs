@@ -25,7 +25,7 @@ namespace CaptchaBot.Services
             "восемь",
         };
 
-        private static int ButtonsCount = NumberTexts.Length;
+        private static readonly int ButtonsCount = NumberTexts.Length;
         private static readonly Random Random = new Random();
         private readonly AppSettings _settings;
         private readonly IUsersStore _usersStore;
