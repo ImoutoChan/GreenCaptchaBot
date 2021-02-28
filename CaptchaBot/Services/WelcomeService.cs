@@ -112,7 +112,7 @@ namespace CaptchaBot.Services
         private bool Check(bool? one, bool? two)
         {
             if (one != null) return one.Value;
-            if (one != null) return two.Value;
+            if (two != null) return two.Value;
             return true;
         }
         private async Task<string> KickChatAsync(long chatId, int queryFromId, NewUser? newUser)
