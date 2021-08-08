@@ -2,6 +2,13 @@ using System;
 
 namespace CaptchaBot
 {
+    public enum JoinMessageDeletePolicy
+    {
+        All,
+        Unsuccessful,
+        None
+    }
+    
     public class AppSettings
     {
         public string BotToken { get; set; }
@@ -13,5 +20,7 @@ namespace CaptchaBot
         /// after getting back online.
         /// </remarks>
         public TimeSpan ProcessEventTimeout { get; set; } = TimeSpan.FromMinutes(1.0);
+        
+        public JoinMessageDeletePolicy DeleteJoinMessages { get; set; }
     }
 }
