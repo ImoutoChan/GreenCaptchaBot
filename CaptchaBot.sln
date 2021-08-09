@@ -7,6 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaptchaBot", "CaptchaBot\Ca
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaptchaBot.Tests", "CaptchaBot.Tests\CaptchaBot.Tests.csproj", "{756DC120-FFDD-4DA3-AB13-6447B0D3A519}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{4B7A8DC8-DB8D-4139-AB22-21DBDA609102}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{023EC92B-AD17-4E5B-90E4-C900DCEE0E8B}"
+ProjectSection(SolutionItems) = preProject
+	.github\workflows\main.yml = .github\workflows\main.yml
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,5 +34,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {63003ED9-7A1A-4663-9049-856679A939CF}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{023EC92B-AD17-4E5B-90E4-C900DCEE0E8B} = {4B7A8DC8-DB8D-4139-AB22-21DBDA609102}
 	EndGlobalSection
 EndGlobal
