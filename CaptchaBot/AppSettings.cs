@@ -20,7 +20,7 @@ namespace CaptchaBot
         /// after getting back online.
         /// </remarks>
         public TimeSpan ProcessEventTimeout { get; set; } = TimeSpan.FromMinutes(1.0);
-        
-        public JoinMessageDeletePolicy DeleteJoinMessages { get; set; }
+
+        public JoinMessageDeletePolicy DeleteJoinMessages { get; set; } = JoinMessageDeletePolicy.All;
     }
 }
