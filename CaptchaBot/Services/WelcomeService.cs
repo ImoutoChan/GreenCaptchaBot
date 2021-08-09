@@ -47,6 +47,7 @@ namespace CaptchaBot.Services
         {
             var chatId = query.Message.Chat.Id;
             var unauthorizedUser = _usersStore.Get(chatId, query.From.Id);
+            bool authorizationSuccess;
 
             if (unauthorizedUser == null)
             {
@@ -62,6 +63,7 @@ namespace CaptchaBot.Services
                     chatId,
                     query.From.Id,
                     DateTime.Now.AddDays(1));
+                authorizationSuccess = false;
 
                 _logger.LogInformation(
                     "User {UserId} with name {UserName} was banned after incorrect answer {UserAnswer}, " +
@@ -93,6 +95,7 @@ namespace CaptchaBot.Services
                     chatId,
                     query.From.Id,
                     postBanPermissions);
+                authorizationSuccess = true;
 
                 _logger.LogInformation(
                     "User {UserId} with name {UserName} was authorized with answer {UserAnswer}. " +
@@ -104,7 +107,13 @@ namespace CaptchaBot.Services
             }
 
             await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId);
-            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId);
+
+            if (_settings.DeleteJoinMessages == JoinMessageDeletePolicy.All
+                || _settings.DeleteJoinMessages == JoinMessageDeletePolicy.Unsuccessful && !authorizationSuccess)
+            {
+                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId);
+            }            
+            
             _usersStore.Remove(unauthorizedUser);
         }
 

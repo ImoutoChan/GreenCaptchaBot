@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +21,7 @@ namespace CaptchaBot.Tests
         private readonly UsersStore _usersStore = new UsersStore();
         private readonly Mock<ITelegramBotClient> _botMock = new Mock<ITelegramBotClient>();
         private readonly ILogger<WelcomeService> _logger;
+        private readonly List<int> _deletedMessages = new();
 
         public WelcomeServiceTests(ITestOutputHelper outputHelper)
         {
@@ -38,13 +41,28 @@ namespace CaptchaBot.Tests
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()
             )).ReturnsAsync(new ChatMember());
+            _botMock.Setup(b => b.GetChatAsync(
+                It.IsAny<ChatId>(),
+                It.IsAny<CancellationToken>()
+            )).ReturnsAsync(new Chat());
+            _botMock.Setup(b => b.DeleteMessageAsync(
+                It.IsAny<ChatId>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()
+            )).Callback((ChatId _, int messageId, CancellationToken _) => _deletedMessages.Add(messageId));
         }
 
-        private static Task ProcessNewChatMember(WelcomeService service, int userId, DateTime enterTime, int fromId = 0)
+        private static Task ProcessNewChatMember(
+            WelcomeService service,
+            int userId,
+            DateTime enterTime,
+            int fromId = 0,
+            int joinMessageId = 0)
         {
             var testUser = new User {Id = userId}; 
             var message = new Message
             {
+                MessageId = joinMessageId,
                 Date = enterTime,
                 Chat = new Chat(),
                 From = new User {Id = fromId},
@@ -54,6 +72,18 @@ namespace CaptchaBot.Tests
                 }
             };
             return service.ProcessNewChatMember(message);
+        }
+
+        private async Task ProcessAnswer(IWelcomeService service, bool successful)
+        {
+            var newUser = _usersStore.GetAll().Single();
+            var callback = new CallbackQuery
+            {
+                Message = new Message { Chat = new Chat() },
+                From = new User { Id = newUser.Id },
+                Data = successful ? newUser.CorrectAnswer.ToString(CultureInfo.InvariantCulture) : "10"
+            };
+            await service.ProcessCallback(callback);
         }
 
         [Fact]
@@ -107,5 +137,48 @@ namespace CaptchaBot.Tests
                 },
                 _ => {});
         }
+
+        private async Task DoRemoveJoinTest(
+            JoinMessageDeletePolicy policy,
+            int joinMessageId,
+            bool successful, 
+            bool deleted)
+        {
+            const int userId = 100;
+            
+            var config = new AppSettings { DeleteJoinMessages = policy };
+            var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+
+            await ProcessNewChatMember(welcomeService, userId, DateTime.UtcNow, joinMessageId: joinMessageId);
+            await ProcessAnswer(welcomeService, successful);
+            if (deleted)
+                Assert.Contains(joinMessageId, _deletedMessages);
+            else
+                Assert.DoesNotContain(joinMessageId, _deletedMessages);
+        }
+
+        [Fact]
+        public Task RemoveJoinMessagesAllMode1() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.All, 123,  successful: true, deleted: true);
+
+        [Fact]
+        public Task RemoveJoinMessagesAllMode2() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.All, 124, successful: false, deleted: true);
+    
+        [Fact]
+        public Task RemoveJoinMessagesNoneMode1() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.None, 321, successful: true, deleted: false);
+        
+        [Fact]
+        public Task RemoveJoinMessagesNoneMode2() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.None, 421, successful: false, deleted: false);
+        
+        [Fact]
+        public Task RemoveJoinMessagesUnsuccessfulMode1() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.Unsuccessful, 42, successful: true, deleted: false);
+        
+        [Fact]
+        public Task RemoveJoinMessagesUnsuccessfulMode2() =>
+            DoRemoveJoinTest(JoinMessageDeletePolicy.Unsuccessful, 43, successful: false, deleted: true);
     }
 }
