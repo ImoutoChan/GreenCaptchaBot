@@ -52,15 +52,28 @@ namespace CaptchaBot
 
             foreach (var newUser in usersToBan)
             {
-                await _telegramBot.KickChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1));
-                await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId);
-                await _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId);
+                await InvokeSafely(() =>
+                    _telegramBot.KickChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1)));
+                await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId));
+                await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId));
                 _usersStore.Remove(newUser);
 
                 _logger.LogInformation(
-                    "User {UserId} with name {UserName} was banned after one minute silence.",
+                    "User {UserId} with name {UserName} was banned after one minute silence",
                     newUser.Id,
                     newUser.PrettyUserName);
+            }
+        }
+
+        private async Task InvokeSafely(Func<Task> func)
+        {
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
             }
         }
     }
