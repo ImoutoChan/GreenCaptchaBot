@@ -32,9 +32,9 @@ namespace CaptchaBot.Services
         private readonly ITelegramBotClient _telegramBot;
 
         public WelcomeService(
-            AppSettings settings, 
-            IUsersStore usersStore, 
-            ILogger<WelcomeService> logger, 
+            AppSettings settings,
+            IUsersStore usersStore,
+            ILogger<WelcomeService> logger,
             ITelegramBotClient telegramBot)
         {
             _settings = settings;
@@ -42,7 +42,7 @@ namespace CaptchaBot.Services
             _logger = logger;
             _telegramBot = telegramBot;
         }
-        
+
         public async Task ProcessCallback(CallbackQuery query)
         {
             var chatId = query.Message.Chat.Id;
@@ -106,14 +106,16 @@ namespace CaptchaBot.Services
                     JsonSerializer.Serialize(postBanPermissions));
             }
 
-            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId);
+            await InvokeSafely(async () =>
+                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId));
 
             if (_settings.DeleteJoinMessages == JoinMessageDeletePolicy.All
                 || _settings.DeleteJoinMessages == JoinMessageDeletePolicy.Unsuccessful && !authorizationSuccess)
             {
-                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId);
-            }            
-            
+                await InvokeSafely(async () =>
+                    await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId));
+            }
+
             _usersStore.Remove(unauthorizedUser);
         }
 
@@ -128,7 +130,7 @@ namespace CaptchaBot.Services
                     freshness);
                 return;
             }
-            
+
             foreach (var unauthorizedUser in message.NewChatMembers)
             {
                 var answer = GetRandomNumber();
@@ -158,17 +160,16 @@ namespace CaptchaBot.Services
 
                 var sentMessage = await _telegramBot
                     .SendTextMessageAsync(
-                        message.Chat.Id, 
-                        $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!", 
-                        replyToMessageId: message.MessageId, 
+                        message.Chat.Id,
+                        $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!",
+                        replyToMessageId: message.MessageId,
                         replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
                 _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer, chatUser);
 
-                
                 _logger.LogInformation(
                     "The new user {UserId} with name {UserName} was detected and trialed. " +
-                    "He has one minute to answer.",
+                    "He has one minute to answer",
                     unauthorizedUser.Id,
                     prettyUserName);
             }
@@ -198,6 +199,18 @@ namespace CaptchaBot.Services
             {
                 var label = i.ToString();
                 yield return InlineKeyboardButton.WithCallbackData(label, label);
+            }
+        }
+
+        private async Task InvokeSafely(Func<Task> func)
+        {
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "An error occured");
             }
         }
     }

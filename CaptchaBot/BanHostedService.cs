@@ -73,7 +73,7 @@ namespace CaptchaBot
             }
             catch (Exception e)
             {
-                _logger.LogError(e, e.Message);
+                _logger.LogWarning(e, "An error occured");
             }
         }
     }
