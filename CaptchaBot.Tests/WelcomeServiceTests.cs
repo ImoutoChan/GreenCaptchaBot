@@ -138,6 +138,24 @@ namespace CaptchaBot.Tests
                 _ => {});
         }
 
+        [Fact]
+        public async Task BotShouldNotFailIfMessageCouldNotBeDeleted()
+        {
+            _botMock.Setup(
+                    b => b.DeleteMessageAsync(It.IsAny<ChatId>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new Exception("This exception should not fail the message processing."));
+            
+            var config = new AppSettings();
+            var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+            
+            const int newUserId = 124;
+
+            await ProcessNewChatMember(welcomeService, newUserId, DateTime.UtcNow);
+            await ProcessAnswer(welcomeService, true);
+
+            Assert.Empty(_usersStore.GetAll());
+        }
+
         private async Task DoRemoveJoinTest(
             JoinMessageDeletePolicy policy,
             int joinMessageId,
