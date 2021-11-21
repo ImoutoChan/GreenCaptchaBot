@@ -4,9 +4,9 @@
     {
         public long ChatId { get; }
 
-        public int UserId { get; }
+        public long UserId { get; }
 
-        public ChatUser(long chatId, int userId)
+        public ChatUser(long chatId, long userId)
         {
             ChatId = chatId;
             UserId = userId;

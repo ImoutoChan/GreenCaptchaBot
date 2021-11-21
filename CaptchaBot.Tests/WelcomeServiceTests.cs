@@ -30,15 +30,17 @@ namespace CaptchaBot.Tests
                 It.IsAny<ChatId>(),
                 It.IsAny<string>(),
                 It.IsAny<ParseMode>(),
+                It.IsAny<IEnumerable<MessageEntity>>(),
                 It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
+                It.IsAny<bool>(),
                 It.IsAny<IReplyMarkup>(),
                 It.IsAny<CancellationToken>()
             )).ReturnsAsync(new Message());
             _botMock.Setup(b => b.GetChatMemberAsync(
                 It.IsAny<ChatId>(),
-                It.IsAny<int>(),
+                It.IsAny<long>(),
                 It.IsAny<CancellationToken>()
             )).ReturnsAsync(new ChatMember());
             _botMock.Setup(b => b.GetChatAsync(
@@ -54,9 +56,9 @@ namespace CaptchaBot.Tests
 
         private static Task ProcessNewChatMember(
             WelcomeService service,
-            int userId,
+            long userId,
             DateTime enterTime,
-            int fromId = 0,
+            long fromId = 0L,
             int joinMessageId = 0)
         {
             var testUser = new User {Id = userId}; 
@@ -92,7 +94,7 @@ namespace CaptchaBot.Tests
             var config = new AppSettings {ProcessEventTimeout = TimeSpan.FromSeconds(5.0)};
             var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
 
-            const int testUserId = 123;
+            const long testUserId = 123L;
             await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow);
 
             Assert.Collection(_botMock.Invocations, 
@@ -122,8 +124,8 @@ namespace CaptchaBot.Tests
             var config = new AppSettings();
             var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
 
-            const int enteringUserId = 123;
-            const int invitingUserId = 345;
+            const long enteringUserId = 123L;
+            const long invitingUserId = 345L;
             
             await ProcessNewChatMember(welcomeService, enteringUserId, DateTime.UtcNow, invitingUserId);
             
@@ -132,7 +134,7 @@ namespace CaptchaBot.Tests
                 restrict =>
                 {
                     Assert.Equal(nameof(ITelegramBotClient.RestrictChatMemberAsync), restrict.Method.Name);
-                    var restrictedUserId = (int)restrict.Arguments[1];
+                    var restrictedUserId = (long)restrict.Arguments[1];
                     Assert.Equal(enteringUserId, restrictedUserId);
                 },
                 _ => {});
@@ -148,7 +150,7 @@ namespace CaptchaBot.Tests
             var config = new AppSettings();
             var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
             
-            const int newUserId = 124;
+            const long newUserId = 124L;
 
             await ProcessNewChatMember(welcomeService, newUserId, DateTime.UtcNow);
             await ProcessAnswer(welcomeService, true);
@@ -162,7 +164,7 @@ namespace CaptchaBot.Tests
             bool successful, 
             bool deleted)
         {
-            const int userId = 100;
+            const long userId = 100L;
             
             var config = new AppSettings { DeleteJoinMessages = policy };
             var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);

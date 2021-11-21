@@ -42,7 +42,7 @@ namespace CaptchaBot.Services
             return _users.Values.ToArray();
         }
 
-        public NewUser Get(long chatId, int userId)
+        public NewUser Get(long chatId, long userId)
         {
             if (_users.TryGetValue(new ChatUser(chatId, userId), out var newUser)) return newUser;
 
