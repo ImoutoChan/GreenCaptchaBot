@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -124,9 +125,9 @@ namespace CaptchaBot.Services
             var freshness = DateTime.UtcNow - message.Date.ToUniversalTime();
             if (freshness > _settings.ProcessEventTimeout)
             {
-                _logger.LogInformation(
+                _logger.LogWarning(
                     "Message about {NewChatMembers} received {Freshness} ago and ignored",
-                    message.NewChatMembers.Length,
+                    GetPrettyNames(message.NewChatMembers),
                     freshness);
                 return;
             }
@@ -190,6 +191,8 @@ namespace CaptchaBot.Services
 
             return string.Join(" ", names);
         }
+
+        private static string GetPrettyNames(IEnumerable<User> users) => string.Join(", ", users.Select(GetPrettyName));
 
         private static int GetRandomNumber() => Random.Next(1, ButtonsCount + 1);
 
