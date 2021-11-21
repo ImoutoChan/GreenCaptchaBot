@@ -7,7 +7,7 @@ namespace CaptchaBot.Services
     {
         public long ChatId { get; }
 
-        public int Id { get; }
+        public long Id { get; }
 
         public DateTimeOffset JoinDateTime { get; }
 
@@ -23,7 +23,7 @@ namespace CaptchaBot.Services
 
         public NewUser(
             long chatId,
-            int id,
+            long id,
             DateTimeOffset joinDateTime,
             int inviteMessageId,
             int joinMessageId,

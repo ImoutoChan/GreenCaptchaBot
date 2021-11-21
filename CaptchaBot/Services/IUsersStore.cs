@@ -15,7 +15,7 @@ namespace CaptchaBot.Services
 
         IReadOnlyCollection<NewUser> GetAll();
 
-        NewUser Get(long chatId, int userId);
+        NewUser Get(long chatId, long userId);
         
         void Remove(NewUser user);
     }
