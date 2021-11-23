@@ -1,3 +1,3 @@
-docker build --tag=imoutochan/captchabot:v1.10.0 -t imoutochan/captchabot .
+docker build --tag=imoutochan/captchabot:v1.11.0 -t imoutochan/captchabot .
 docker push imoutochan/captchabot:latest
-docker push imoutochan/captchabot:v1.10.0
+docker push imoutochan/captchabot:v1.11.0
