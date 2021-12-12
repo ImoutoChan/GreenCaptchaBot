@@ -34,7 +34,7 @@ namespace CaptchaBot.Services
                 answer,
                 chatMember);
 
-            _users.AddOrUpdate(key, newValue, (chatUser, newUser) => newValue);
+            _users.AddOrUpdate(key, newValue, (_, _) => newValue);
         }
 
         public IReadOnlyCollection<NewUser> GetAll()
