@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,20 +17,26 @@ namespace CaptchaBot
             var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
 
             lifetime.ApplicationStarted.Register(
-                async () =>
+                () =>
                 {
                     var logger = services.GetRequiredService<ILogger<Startup>>();
                     var address = services.GetRequiredService<AppSettings>().WebHookAddress;
 
-                    logger.LogInformation("Removing webhook");
-                    await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
+                    async Task ResetWebHook()
+                    {
+                        logger.LogInformation("Removing webhook");
+                        await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
 
-                    logger.LogInformation($"Setting webhook to {address}");
-                    await services.GetRequiredService<ITelegramBotClient>().SetWebhookAsync(address, maxConnections: 5);
-                    logger.LogInformation($"Webhook is set to {address}");
+                        logger.LogInformation($"Setting webhook to {address}");
+                        await services.GetRequiredService<ITelegramBotClient>()
+                            .SetWebhookAsync(address, maxConnections: 5);
+                        logger.LogInformation($"Webhook is set to {address}");
 
-                    var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
-                    logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
+                        var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
+                        logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
+                    }
+
+                    _ = ResetWebHook();
                 });
 
             lifetime.ApplicationStopping.Register(

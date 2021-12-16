@@ -28,7 +28,7 @@ namespace CaptchaBot
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _timer = new Timer(async x => await BanSlowUsers(), null, 0, 10000);
+            _timer = new Timer(__ => _ = InvokeSafely(BanSlowUsers), null, 0, 10000);
             return Task.CompletedTask;
         }
 
