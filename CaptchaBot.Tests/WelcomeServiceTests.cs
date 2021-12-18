@@ -18,8 +18,8 @@ namespace CaptchaBot.Tests;
 
 public class WelcomeServiceTests
 {
-    private readonly UsersStore _usersStore = new UsersStore();
-    private readonly Mock<ITelegramBotClient> _botMock = new Mock<ITelegramBotClient>();
+    private readonly UsersStore _usersStore = new();
+    private readonly Mock<ITelegramBotClient> _botMock = new();
     private readonly ILogger<WelcomeService> _logger;
     private readonly List<int> _deletedMessages = new();
 
