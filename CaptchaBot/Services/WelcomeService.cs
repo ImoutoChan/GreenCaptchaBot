@@ -8,213 +8,212 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace CaptchaBot.Services
+namespace CaptchaBot.Services;
+
+public class WelcomeService : IWelcomeService
 {
-    public class WelcomeService : IWelcomeService
+    private static readonly string[] NumberTexts =
     {
-        private static readonly string[] NumberTexts =
-        {
-            "ноль",
-            "один",
-            "два",
-            "три",
-            "четыре",
-            "пять",
-            "шесть",
-            "семь",
-            "восемь",
-        };
+        "ноль",
+        "один",
+        "два",
+        "три",
+        "четыре",
+        "пять",
+        "шесть",
+        "семь",
+        "восемь",
+    };
 
-        private const int ButtonsCount = 8;
-        private static readonly Random Random = new Random();
-        private readonly AppSettings _settings;
-        private readonly IUsersStore _usersStore;
-        private readonly ILogger<WelcomeService> _logger;
-        private readonly ITelegramBotClient _telegramBot;
+    private const int ButtonsCount = 8;
+    private static readonly Random Random = new Random();
+    private readonly AppSettings _settings;
+    private readonly IUsersStore _usersStore;
+    private readonly ILogger<WelcomeService> _logger;
+    private readonly ITelegramBotClient _telegramBot;
 
-        public WelcomeService(
-            AppSettings settings,
-            IUsersStore usersStore,
-            ILogger<WelcomeService> logger,
-            ITelegramBotClient telegramBot)
+    public WelcomeService(
+        AppSettings settings,
+        IUsersStore usersStore,
+        ILogger<WelcomeService> logger,
+        ITelegramBotClient telegramBot)
+    {
+        _settings = settings;
+        _usersStore = usersStore;
+        _logger = logger;
+        _telegramBot = telegramBot;
+    }
+
+    public async Task ProcessCallback(CallbackQuery query)
+    {
+        var chatId = query.Message.Chat.Id;
+        var unauthorizedUser = _usersStore.Get(chatId, query.From.Id);
+        bool authorizationSuccess;
+
+        if (unauthorizedUser == null)
         {
-            _settings = settings;
-            _usersStore = usersStore;
-            _logger = logger;
-            _telegramBot = telegramBot;
+            _logger.LogInformation("User with id {UserId} not found", query.From.Id);
+            return;
         }
 
-        public async Task ProcessCallback(CallbackQuery query)
+        var unauthorizedUserAnswer = int.Parse(query.Data);
+
+        if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
         {
-            var chatId = query.Message.Chat.Id;
-            var unauthorizedUser = _usersStore.Get(chatId, query.From.Id);
-            bool authorizationSuccess;
+            await _telegramBot.KickChatMemberAsync(
+                chatId,
+                query.From.Id,
+                DateTime.Now.AddDays(1));
+            authorizationSuccess = false;
 
-            if (unauthorizedUser == null)
+            _logger.LogInformation(
+                "User {UserId} with name {UserName} was banned after incorrect answer {UserAnswer}, " +
+                "while correct one is {CorrectAnswer}.",
+                unauthorizedUser.Id,
+                unauthorizedUser.PrettyUserName,
+                unauthorizedUserAnswer,
+                unauthorizedUser.CorrectAnswer);
+        }
+        else
+        {
+            var preBanPermissions = unauthorizedUser.ChatMember;
+
+            var defaultPermissions = (await _telegramBot.GetChatAsync(chatId)).Permissions;
+
+            var postBanPermissions = new ChatPermissions
             {
-                _logger.LogInformation("User with id {UserId} not found", query.From.Id);
-                return;
-            }
+                CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews ?? defaultPermissions?.CanAddWebPagePreviews ?? true,
+                CanChangeInfo = preBanPermissions.CanChangeInfo ?? defaultPermissions?.CanChangeInfo ?? true,
+                CanInviteUsers = preBanPermissions.CanInviteUsers ?? defaultPermissions?.CanInviteUsers ?? true,
+                CanPinMessages = preBanPermissions.CanPinMessages ?? defaultPermissions?.CanPinMessages ?? true,
+                CanSendMediaMessages = preBanPermissions.CanSendMediaMessages ?? defaultPermissions?.CanSendMediaMessages ?? true,
+                CanSendMessages = preBanPermissions.CanSendMessages ?? defaultPermissions?.CanSendMessages ?? true,
+                CanSendOtherMessages = preBanPermissions.CanSendOtherMessages ?? defaultPermissions?.CanSendOtherMessages ?? true,
+                CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true
+            };
 
-            var unauthorizedUserAnswer = int.Parse(query.Data);
+            await _telegramBot.RestrictChatMemberAsync(
+                chatId,
+                query.From.Id,
+                postBanPermissions);
+            authorizationSuccess = true;
 
-            if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
-            {
-                await _telegramBot.KickChatMemberAsync(
-                    chatId,
-                    query.From.Id,
-                    DateTime.Now.AddDays(1));
-                authorizationSuccess = false;
+            _logger.LogInformation(
+                "User {UserId} with name {UserName} was authorized with answer {UserAnswer}. " +
+                "With post ban permissions {PostBanPermissions}.",
+                unauthorizedUser.Id,
+                unauthorizedUser.PrettyUserName,
+                unauthorizedUserAnswer,
+                JsonSerializer.Serialize(postBanPermissions));
+        }
 
-                _logger.LogInformation(
-                    "User {UserId} with name {UserName} was banned after incorrect answer {UserAnswer}, " +
-                    "while correct one is {CorrectAnswer}.",
-                    unauthorizedUser.Id,
-                    unauthorizedUser.PrettyUserName,
-                    unauthorizedUserAnswer,
-                    unauthorizedUser.CorrectAnswer);
-            }
-            else
-            {
-                var preBanPermissions = unauthorizedUser.ChatMember;
+        await InvokeSafely(async () =>
+            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId));
 
-                var defaultPermissions = (await _telegramBot.GetChatAsync(chatId)).Permissions;
-
-                var postBanPermissions = new ChatPermissions
-                {
-                    CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews ?? defaultPermissions?.CanAddWebPagePreviews ?? true,
-                    CanChangeInfo = preBanPermissions.CanChangeInfo ?? defaultPermissions?.CanChangeInfo ?? true,
-                    CanInviteUsers = preBanPermissions.CanInviteUsers ?? defaultPermissions?.CanInviteUsers ?? true,
-                    CanPinMessages = preBanPermissions.CanPinMessages ?? defaultPermissions?.CanPinMessages ?? true,
-                    CanSendMediaMessages = preBanPermissions.CanSendMediaMessages ?? defaultPermissions?.CanSendMediaMessages ?? true,
-                    CanSendMessages = preBanPermissions.CanSendMessages ?? defaultPermissions?.CanSendMessages ?? true,
-                    CanSendOtherMessages = preBanPermissions.CanSendOtherMessages ?? defaultPermissions?.CanSendOtherMessages ?? true,
-                    CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true
-                };
-
-                await _telegramBot.RestrictChatMemberAsync(
-                    chatId,
-                    query.From.Id,
-                    postBanPermissions);
-                authorizationSuccess = true;
-
-                _logger.LogInformation(
-                    "User {UserId} with name {UserName} was authorized with answer {UserAnswer}. " +
-                    "With post ban permissions {PostBanPermissions}.",
-                    unauthorizedUser.Id,
-                    unauthorizedUser.PrettyUserName,
-                    unauthorizedUserAnswer,
-                    JsonSerializer.Serialize(postBanPermissions));
-            }
-
+        if (_settings.DeleteJoinMessages == JoinMessageDeletePolicy.All
+            || _settings.DeleteJoinMessages == JoinMessageDeletePolicy.Unsuccessful && !authorizationSuccess)
+        {
             await InvokeSafely(async () =>
-                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId));
-
-            if (_settings.DeleteJoinMessages == JoinMessageDeletePolicy.All
-                || _settings.DeleteJoinMessages == JoinMessageDeletePolicy.Unsuccessful && !authorizationSuccess)
-            {
-                await InvokeSafely(async () =>
-                    await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId));
-            }
-
-            _usersStore.Remove(unauthorizedUser);
+                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId));
         }
 
-        public async Task ProcessNewChatMember(Message message)
+        _usersStore.Remove(unauthorizedUser);
+    }
+
+    public async Task ProcessNewChatMember(Message message)
+    {
+        var freshness = DateTime.UtcNow - message.Date.ToUniversalTime();
+        if (freshness > _settings.ProcessEventTimeout)
         {
-            var freshness = DateTime.UtcNow - message.Date.ToUniversalTime();
-            if (freshness > _settings.ProcessEventTimeout)
-            {
-                _logger.LogWarning(
-                    "Message about {NewChatMembers} received {Freshness} ago and ignored",
-                    GetPrettyNames(message.NewChatMembers),
-                    freshness);
+            _logger.LogWarning(
+                "Message about {NewChatMembers} received {Freshness} ago and ignored",
+                GetPrettyNames(message.NewChatMembers),
+                freshness);
+            return;
+        }
+
+        foreach (var unauthorizedUser in message.NewChatMembers)
+        {
+            var answer = GetRandomNumber();
+
+            var chatUser = await _telegramBot.GetChatMemberAsync(message.Chat.Id, unauthorizedUser.Id);
+
+            if (chatUser == null)
                 return;
-            }
 
-            foreach (var unauthorizedUser in message.NewChatMembers)
-            {
-                var answer = GetRandomNumber();
+            await _telegramBot.RestrictChatMemberAsync(
+                message.Chat.Id,
+                unauthorizedUser.Id,
+                new ChatPermissions
+                {
+                    CanAddWebPagePreviews = false,
+                    CanChangeInfo = false,
+                    CanInviteUsers = false,
+                    CanPinMessages = false,
+                    CanSendMediaMessages = false,
+                    CanSendMessages = false,
+                    CanSendOtherMessages = false,
+                    CanSendPolls = false
+                },
+                DateTime.Now.AddDays(1));
 
-                var chatUser = await _telegramBot.GetChatMemberAsync(message.Chat.Id, unauthorizedUser.Id);
+            var prettyUserName = GetPrettyName(unauthorizedUser);
 
-                if (chatUser == null)
-                    return;
-
-                await _telegramBot.RestrictChatMemberAsync(
+            var sentMessage = await _telegramBot
+                .SendTextMessageAsync(
                     message.Chat.Id,
-                    unauthorizedUser.Id,
-                    new ChatPermissions
-                    {
-                        CanAddWebPagePreviews = false,
-                        CanChangeInfo = false,
-                        CanInviteUsers = false,
-                        CanPinMessages = false,
-                        CanSendMediaMessages = false,
-                        CanSendMessages = false,
-                        CanSendOtherMessages = false,
-                        CanSendPolls = false
-                    },
-                    DateTime.Now.AddDays(1));
+                    $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!",
+                    replyToMessageId: message.MessageId,
+                    replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
-                var prettyUserName = GetPrettyName(unauthorizedUser);
+            _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer, chatUser);
 
-                var sentMessage = await _telegramBot
-                    .SendTextMessageAsync(
-                        message.Chat.Id,
-                        $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!",
-                        replyToMessageId: message.MessageId,
-                        replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
-
-                _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer, chatUser);
-
-                _logger.LogInformation(
-                    "The new user {UserId} with name {UserName} was detected and trialed. " +
-                    "He has one minute to answer",
-                    unauthorizedUser.Id,
-                    prettyUserName);
-            }
+            _logger.LogInformation(
+                "The new user {UserId} with name {UserName} was detected and trialed. " +
+                "He has one minute to answer",
+                unauthorizedUser.Id,
+                prettyUserName);
         }
+    }
 
-        private static string GetText(in int answer) => NumberTexts[answer];
+    private static string GetText(in int answer) => NumberTexts[answer];
 
-        private static string GetPrettyName(User messageNewChatMember)
+    private static string GetPrettyName(User messageNewChatMember)
+    {
+        var names = new List<string>(3);
+
+        if (!string.IsNullOrWhiteSpace(messageNewChatMember.FirstName))
+            names.Add(messageNewChatMember.FirstName);
+        if (!string.IsNullOrWhiteSpace(messageNewChatMember.LastName))
+            names.Add(messageNewChatMember.LastName);
+        if (!string.IsNullOrWhiteSpace(messageNewChatMember.Username))
+            names.Add("(@" + messageNewChatMember.Username + ")");
+
+        return string.Join(" ", names);
+    }
+
+    private static string GetPrettyNames(IEnumerable<User> users) => string.Join(", ", users.Select(GetPrettyName));
+
+    private static int GetRandomNumber() => Random.Next(1, ButtonsCount + 1);
+
+    private static IEnumerable<InlineKeyboardButton> GetKeyboardButtons()
+    {
+        for (int i = 1; i <= ButtonsCount; i++)
         {
-            var names = new List<string>(3);
-
-            if (!string.IsNullOrWhiteSpace(messageNewChatMember.FirstName))
-                names.Add(messageNewChatMember.FirstName);
-            if (!string.IsNullOrWhiteSpace(messageNewChatMember.LastName))
-                names.Add(messageNewChatMember.LastName);
-            if (!string.IsNullOrWhiteSpace(messageNewChatMember.Username))
-                names.Add("(@" + messageNewChatMember.Username + ")");
-
-            return string.Join(" ", names);
+            var label = i.ToString();
+            yield return InlineKeyboardButton.WithCallbackData(label, label);
         }
+    }
 
-        private static string GetPrettyNames(IEnumerable<User> users) => string.Join(", ", users.Select(GetPrettyName));
-
-        private static int GetRandomNumber() => Random.Next(1, ButtonsCount + 1);
-
-        private static IEnumerable<InlineKeyboardButton> GetKeyboardButtons()
+    private async Task InvokeSafely(Func<Task> func)
+    {
+        try
         {
-            for (int i = 1; i <= ButtonsCount; i++)
-            {
-                var label = i.ToString();
-                yield return InlineKeyboardButton.WithCallbackData(label, label);
-            }
+            await func();
         }
-
-        private async Task InvokeSafely(Func<Task> func)
+        catch (Exception e)
         {
-            try
-            {
-                await func();
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "An error occured");
-            }
+            _logger.LogWarning(e, "An error occured");
         }
     }
 }

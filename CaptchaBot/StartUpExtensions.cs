@@ -6,49 +6,48 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Telegram.Bot;
 
-namespace CaptchaBot
+namespace CaptchaBot;
+
+public static class StartupExtensions
 {
-    public static class StartupExtensions
+    public static IApplicationBuilder UseTelegramBotWebhook(this IApplicationBuilder applicationBuilder)
     {
-        public static IApplicationBuilder UseTelegramBotWebhook(this IApplicationBuilder applicationBuilder)
-        {
-            var services = applicationBuilder.ApplicationServices;
+        var services = applicationBuilder.ApplicationServices;
 
-            var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
+        var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
 
-            lifetime.ApplicationStarted.Register(
-                () =>
+        lifetime.ApplicationStarted.Register(
+            () =>
+            {
+                var logger = services.GetRequiredService<ILogger<Startup>>();
+                var address = services.GetRequiredService<AppSettings>().WebHookAddress;
+
+                async Task ResetWebHook()
                 {
-                    var logger = services.GetRequiredService<ILogger<Startup>>();
-                    var address = services.GetRequiredService<AppSettings>().WebHookAddress;
+                    logger.LogInformation("Removing webhook");
+                    await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
 
-                    async Task ResetWebHook()
-                    {
-                        logger.LogInformation("Removing webhook");
-                        await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
+                    logger.LogInformation($"Setting webhook to {address}");
+                    await services.GetRequiredService<ITelegramBotClient>()
+                        .SetWebhookAsync(address, maxConnections: 5);
+                    logger.LogInformation($"Webhook is set to {address}");
 
-                        logger.LogInformation($"Setting webhook to {address}");
-                        await services.GetRequiredService<ITelegramBotClient>()
-                            .SetWebhookAsync(address, maxConnections: 5);
-                        logger.LogInformation($"Webhook is set to {address}");
+                    var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
+                    logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
+                }
 
-                        var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
-                        logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
-                    }
+                _ = ResetWebHook();
+            });
 
-                    _ = ResetWebHook();
-                });
+        lifetime.ApplicationStopping.Register(
+            () =>
+            {
+                var logger = services.GetService<ILogger<Startup>>();
 
-            lifetime.ApplicationStopping.Register(
-                () =>
-                {
-                    var logger = services.GetService<ILogger<Startup>>();
+                services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
+                logger.LogInformation("Webhook removed");
+            });
 
-                    services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
-                    logger.LogInformation("Webhook removed");
-                });
-
-            return applicationBuilder;
-        }
+        return applicationBuilder;
     }
 }

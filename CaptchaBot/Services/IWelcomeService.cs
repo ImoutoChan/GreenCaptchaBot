@@ -1,12 +1,11 @@
 ﻿using System.Threading.Tasks;
 using Telegram.Bot.Types;
 
-namespace CaptchaBot.Services
-{
-    public interface IWelcomeService
-    {
-        Task ProcessCallback(CallbackQuery query);
+namespace CaptchaBot.Services;
 
-        Task ProcessNewChatMember(Message message);
-    }
+public interface IWelcomeService
+{
+    Task ProcessCallback(CallbackQuery query);
+
+    Task ProcessNewChatMember(Message message);
 }

@@ -4,54 +4,53 @@ using System.Collections.Generic;
 using System.Linq;
 using Telegram.Bot.Types;
 
-namespace CaptchaBot.Services
+namespace CaptchaBot.Services;
+
+public class UsersStore : IUsersStore
 {
-    public class UsersStore : IUsersStore
+    private readonly ConcurrentDictionary<ChatUser, NewUser> _users;
+
+    public UsersStore()
     {
-        private readonly ConcurrentDictionary<ChatUser, NewUser> _users;
+        _users = new ConcurrentDictionary<ChatUser, NewUser>();
+    }
 
-        public UsersStore()
-        {
-            _users = new ConcurrentDictionary<ChatUser, NewUser>();
-        }
+    public void Add(
+        User user,
+        Message message,
+        int sentMessageId,
+        string prettyUserName,
+        int answer,
+        ChatMember chatMember)
+    {
+        var key = new ChatUser(message.Chat.Id, user.Id);
+        var newValue = new NewUser(
+            message.Chat.Id,
+            user.Id,
+            DateTimeOffset.Now,
+            sentMessageId,
+            message.MessageId,
+            prettyUserName,
+            answer,
+            chatMember);
 
-        public void Add(
-            User user,
-            Message message,
-            int sentMessageId,
-            string prettyUserName,
-            int answer,
-            ChatMember chatMember)
-        {
-            var key = new ChatUser(message.Chat.Id, user.Id);
-            var newValue = new NewUser(
-                message.Chat.Id,
-                user.Id,
-                DateTimeOffset.Now,
-                sentMessageId,
-                message.MessageId,
-                prettyUserName,
-                answer,
-                chatMember);
+        _users.AddOrUpdate(key, newValue, (_, _) => newValue);
+    }
 
-            _users.AddOrUpdate(key, newValue, (_, _) => newValue);
-        }
+    public IReadOnlyCollection<NewUser> GetAll()
+    {
+        return _users.Values.ToArray();
+    }
 
-        public IReadOnlyCollection<NewUser> GetAll()
-        {
-            return _users.Values.ToArray();
-        }
+    public NewUser Get(long chatId, long userId)
+    {
+        if (_users.TryGetValue(new ChatUser(chatId, userId), out var newUser)) return newUser;
 
-        public NewUser Get(long chatId, long userId)
-        {
-            if (_users.TryGetValue(new ChatUser(chatId, userId), out var newUser)) return newUser;
+        return null;
+    }
 
-            return null;
-        }
-
-        public void Remove(NewUser user)
-        {
-            _users.TryRemove(new ChatUser(user.ChatId, user.Id), out _);
-        }
+    public void Remove(NewUser user)
+    {
+        _users.TryRemove(new ChatUser(user.ChatId, user.Id), out _);
     }
 }
