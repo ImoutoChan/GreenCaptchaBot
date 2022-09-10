@@ -1,5 +1,3 @@
-using System;
-
 namespace CaptchaBot;
 
 public enum JoinMessageDeletePolicy
