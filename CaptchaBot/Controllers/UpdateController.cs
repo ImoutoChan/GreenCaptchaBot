@@ -39,8 +39,8 @@ public class UpdateController : Controller
 
             if (update?.Type == UpdateType.CallbackQuery)
             {
-                await _welcomeService.ProcessCallback(update.CallbackQuery);
-                await _telegramBot.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+                await _welcomeService.ProcessCallback(update.CallbackQuery!);
+                await _telegramBot.AnswerCallbackQueryAsync(update.CallbackQuery!.Id);
             }
         }
         catch (Exception e)

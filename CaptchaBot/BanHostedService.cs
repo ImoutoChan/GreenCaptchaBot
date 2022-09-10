@@ -14,7 +14,7 @@ public class BanHostedService : IHostedService
     private readonly ILogger<BanHostedService> _logger;
     private readonly ITelegramBotClient _telegramBot;
     private readonly IUsersStore _usersStore;
-    private Timer _timer;
+    private Timer? _timer;
 
     public BanHostedService(
         IUsersStore usersStore,
@@ -53,7 +53,7 @@ public class BanHostedService : IHostedService
         foreach (var newUser in usersToBan)
         {
             await InvokeSafely(() =>
-                _telegramBot.KickChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1)));
+                _telegramBot.BanChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1)));
             await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId));
             await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId));
             _usersStore.Remove(newUser);

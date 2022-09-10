@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace CaptchaBot.Services;
@@ -46,7 +42,7 @@ public class WelcomeService : IWelcomeService
 
     public async Task ProcessCallback(CallbackQuery query)
     {
-        var chatId = query.Message.Chat.Id;
+        var chatId = query.Message!.Chat.Id;
         var unauthorizedUser = _usersStore.Get(chatId, query.From.Id);
         bool authorizationSuccess;
 
@@ -56,11 +52,11 @@ public class WelcomeService : IWelcomeService
             return;
         }
 
-        var unauthorizedUserAnswer = int.Parse(query.Data);
+        var unauthorizedUserAnswer = int.Parse(query.Data!);
 
         if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
         {
-            await _telegramBot.KickChatMemberAsync(
+            await _telegramBot.BanChatMemberAsync(
                 chatId,
                 query.From.Id,
                 DateTime.Now.AddDays(1));
@@ -68,7 +64,7 @@ public class WelcomeService : IWelcomeService
 
             _logger.LogInformation(
                 "User {UserId} with name {UserName} was banned after incorrect answer {UserAnswer}, " +
-                "while correct one is {CorrectAnswer}.",
+                "while correct one is {CorrectAnswer}",
                 unauthorizedUser.Id,
                 unauthorizedUser.PrettyUserName,
                 unauthorizedUserAnswer,
@@ -76,7 +72,7 @@ public class WelcomeService : IWelcomeService
         }
         else
         {
-            var preBanPermissions = unauthorizedUser.ChatMember;
+            var preBanPermissions = GetPreBanPermissions(unauthorizedUser.ChatMember);
 
             var defaultPermissions = (await _telegramBot.GetChatAsync(chatId)).Permissions;
 
@@ -100,7 +96,7 @@ public class WelcomeService : IWelcomeService
 
             _logger.LogInformation(
                 "User {UserId} with name {UserName} was authorized with answer {UserAnswer}. " +
-                "With post ban permissions {PostBanPermissions}.",
+                "With post ban permissions {PostBanPermissions}",
                 unauthorizedUser.Id,
                 unauthorizedUser.PrettyUserName,
                 unauthorizedUserAnswer,
@@ -120,6 +116,50 @@ public class WelcomeService : IWelcomeService
         _usersStore.Remove(unauthorizedUser);
     }
 
+    private ChatPermissions GetPreBanPermissions(ChatMember chatMember)
+    {
+        return chatMember switch
+        {
+            ChatMemberAdministrator chatMemberAdministrator => new ChatPermissions
+            {
+                CanSendMessages = true,
+                CanSendMediaMessages = true,
+                CanSendPolls = true,
+                CanSendOtherMessages = true,
+                CanAddWebPagePreviews = true,
+                CanChangeInfo = chatMemberAdministrator.CanChangeInfo,
+                CanInviteUsers = chatMemberAdministrator.CanInviteUsers,
+                CanPinMessages = chatMemberAdministrator.CanPinMessages
+            },
+            ChatMemberBanned _ => new ChatPermissions(),
+            ChatMemberLeft _ => new ChatPermissions(),
+            ChatMemberMember _ => new ChatPermissions(),
+            ChatMemberOwner _ => new ChatPermissions
+            {
+                CanSendMessages = true,
+                CanSendMediaMessages = true,
+                CanSendPolls = true,
+                CanSendOtherMessages = true,
+                CanAddWebPagePreviews = true,
+                CanChangeInfo = true,
+                CanInviteUsers = true,
+                CanPinMessages = true
+            },
+            ChatMemberRestricted chatMemberRestricted => new ChatPermissions
+            {
+                CanSendMessages = chatMemberRestricted.CanSendMessages,
+                CanSendMediaMessages = chatMemberRestricted.CanSendMediaMessages,
+                CanSendPolls = chatMemberRestricted.CanSendPolls,
+                CanSendOtherMessages = chatMemberRestricted.CanSendOtherMessages,
+                CanAddWebPagePreviews = chatMemberRestricted.CanAddWebPagePreviews,
+                CanChangeInfo = chatMemberRestricted.CanChangeInfo,
+                CanInviteUsers = chatMemberRestricted.CanInviteUsers,
+                CanPinMessages = chatMemberRestricted.CanPinMessages
+            },
+            _ => new ChatPermissions()
+        };
+    }
+
     public async Task ProcessNewChatMember(Message message)
     {
         var freshness = DateTime.UtcNow - message.Date.ToUniversalTime();
@@ -127,18 +167,18 @@ public class WelcomeService : IWelcomeService
         {
             _logger.LogWarning(
                 "Message about {NewChatMembers} received {Freshness} ago and ignored",
-                GetPrettyNames(message.NewChatMembers),
+                GetPrettyNames(message.NewChatMembers ?? Array.Empty<User>()),
                 freshness);
             return;
         }
 
-        foreach (var unauthorizedUser in message.NewChatMembers)
+        foreach (var unauthorizedUser in message.NewChatMembers ?? Array.Empty<User>())
         {
             var answer = GetRandomNumber();
 
             var chatUser = await _telegramBot.GetChatMemberAsync(message.Chat.Id, unauthorizedUser.Id);
 
-            if (chatUser == null)
+            if (chatUser == null || chatUser.Status == ChatMemberStatus.Left)
                 return;
 
             await _telegramBot.RestrictChatMemberAsync(

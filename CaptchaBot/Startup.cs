@@ -26,7 +26,7 @@ public class Startup
         services.AddOptions();
         services.Configure<AppSettings>(Configuration.GetSection("Configuration"));
 
-        services.AddTransient(ser => ser.GetService<IOptions<AppSettings>>().Value);
+        services.AddTransient(ser => ser.GetRequiredService<IOptions<AppSettings>>().Value);
 
         services.AddSingleton<ITelegramBotClient>(
             x =>

@@ -42,7 +42,7 @@ public static class StartupExtensions
         lifetime.ApplicationStopping.Register(
             () =>
             {
-                var logger = services.GetService<ILogger<Startup>>();
+                var logger = services.GetRequiredService<ILogger<Startup>>();
 
                 services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
                 logger.LogInformation("Webhook removed");

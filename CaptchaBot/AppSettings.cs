@@ -11,8 +11,8 @@ public enum JoinMessageDeletePolicy
     
 public class AppSettings
 {
-    public string BotToken { get; set; }
-    public string WebHookAddress { get; set; }
+    public string BotToken { get; set; } = default!;
+    public string WebHookAddress { get; set; } = default!;
         
     /// <summary>If this time has been passed since the user enter event, the event won't be processed.</summary>
     /// <remarks>

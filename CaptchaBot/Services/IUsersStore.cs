@@ -15,7 +15,7 @@ public interface IUsersStore
 
     IReadOnlyCollection<NewUser> GetAll();
 
-    NewUser Get(long chatId, long userId);
+    NewUser? Get(long chatId, long userId);
         
     void Remove(NewUser user);
 }
