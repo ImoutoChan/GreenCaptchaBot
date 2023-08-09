@@ -1,7 +1,7 @@
 using System.Globalization;
 using CaptchaBot.Services;
+using FakeItEasy;
 using Microsoft.Extensions.Logging;
-using Moq;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
 using Telegram.Bot.Requests.Abstractions;
@@ -14,28 +14,25 @@ namespace CaptchaBot.Tests;
 public class WelcomeServiceTests
 {
     private readonly UsersStore _usersStore = new();
-    private readonly Mock<ITelegramBotClient> _botMock = new();
+    private readonly ITelegramBotClient _botMock;
     private readonly ILogger<WelcomeService> _logger;
     private readonly List<int> _deletedMessages = new();
 
     public WelcomeServiceTests(ITestOutputHelper outputHelper)
     {
         _logger = outputHelper.BuildLoggerFor<WelcomeService>();
-        _botMock
-            .Setup(b => b.MakeRequestAsync(It.IsAny<SendMessageRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Message());
+        _botMock = A.Fake<ITelegramBotClient>();
+        A.CallTo(() => _botMock.MakeRequestAsync(A<SendMessageRequest>._, A<CancellationToken>._))
+            .Returns(new Message());
 
-        _botMock
-            .Setup(b => b.MakeRequestAsync(It.IsAny<GetChatMemberRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ChatMemberMember());
+        A.CallTo(() => _botMock.MakeRequestAsync(A<GetChatMemberRequest>._, A<CancellationToken>._))
+            .Returns(new ChatMemberMember());
 
-        _botMock
-            .Setup(b => b.MakeRequestAsync(It.IsAny<GetChatRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Chat());
+        A.CallTo(() => _botMock.MakeRequestAsync(A<GetChatRequest>._, A<CancellationToken>._))
+            .Returns(new Chat());
 
-        _botMock
-            .Setup(b => b.MakeRequestAsync(It.IsAny<DeleteMessageRequest>(), It.IsAny<CancellationToken>()))
-            .Callback((IRequest<bool> request, CancellationToken _) => _deletedMessages.Add((request as DeleteMessageRequest)!.MessageId));
+        A.CallTo(() => _botMock.MakeRequestAsync(A<DeleteMessageRequest>._, A<CancellationToken>._))
+            .Invokes((IRequest<bool> request, CancellationToken _) => _deletedMessages.Add((request as DeleteMessageRequest)!.MessageId));
     }
 
     private static Task ProcessNewChatMember(
@@ -76,26 +73,26 @@ public class WelcomeServiceTests
     public async Task BotShouldProcessEventWithinTimeout()
     {
         var config = new AppSettings {ProcessEventTimeout = TimeSpan.FromSeconds(5.0)};
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
 
         const long testUserId = 123L;
         await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow);
 
-        Assert.Collection(_botMock.Invocations,
+        Assert.Collection(Fake.GetCalls(_botMock),
             getChatMember =>
             {
                 Assert.Equal(nameof(ITelegramBotClient.MakeRequestAsync), getChatMember.Method.Name);
-                Assert.Equal(typeof(GetChatMemberRequest), getChatMember.Arguments.First().GetType());
+                Assert.IsType<GetChatMemberRequest>(getChatMember.Arguments.First());
             },
             restrict =>
             {
                 Assert.Equal(nameof(ITelegramBotClient.MakeRequestAsync), restrict.Method.Name);
-                Assert.Equal(typeof(RestrictChatMemberRequest), restrict.Arguments.First().GetType());
+                Assert.IsType<RestrictChatMemberRequest>(restrict.Arguments.First());
             },
             sendMessage =>
             {
                 Assert.Equal(nameof(ITelegramBotClient.MakeRequestAsync), sendMessage.Method.Name);
-                Assert.Equal(typeof(SendMessageRequest), sendMessage.Arguments.First().GetType());
+                Assert.IsType<SendMessageRequest>(sendMessage.Arguments.First());
             });
 
         Assert.Equal(testUserId, _usersStore.GetAll().Single().Id);
@@ -105,12 +102,12 @@ public class WelcomeServiceTests
     public async Task BotShouldNotProcessEventOutsideTimeout()
     {
         var config = new AppSettings {ProcessEventTimeout = TimeSpan.FromMinutes(5.0)};
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
 
         const int testUserId = 345;
         await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow - TimeSpan.FromMinutes(6.0));
 
-        Assert.Empty(_botMock.Invocations);
+        Assert.Empty(Fake.GetCalls(_botMock));
         Assert.Empty(_usersStore.GetAll());
     }
 
@@ -118,20 +115,19 @@ public class WelcomeServiceTests
     public async Task BotShouldRestrictTheEnteringUserAndNotTheMessageAuthor()
     {
         var config = new AppSettings();
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
 
         const long enteringUserId = 123L;
         const long invitingUserId = 345L;
 
         await ProcessNewChatMember(welcomeService, enteringUserId, DateTime.UtcNow, invitingUserId);
 
-        Assert.Collection(_botMock.Invocations,
+        Assert.Collection(Fake.GetCalls(_botMock),
             _ => {},
             restrict =>
             {
                 Assert.Equal(nameof(ITelegramBotClient.MakeRequestAsync), restrict.Method.Name);
-                Assert.Equal(typeof(RestrictChatMemberRequest), restrict.Arguments.First().GetType());
-                var restrictedUserId = (RestrictChatMemberRequest)restrict.Arguments[0];
+                var restrictedUserId = (RestrictChatMemberRequest)restrict.Arguments[0]!;
                 Assert.Equal(enteringUserId, restrictedUserId.UserId);
             },
             _ => {});
@@ -140,12 +136,11 @@ public class WelcomeServiceTests
     [Fact]
     public async Task BotShouldNotFailIfMessageCouldNotBeDeleted()
     {
-        _botMock
-            .Setup(b => b.MakeRequestAsync(It.IsAny<DeleteMessageRequest>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("This exception should not fail the message processing."));
+        A.CallTo(() => _botMock.MakeRequestAsync(A<DeleteMessageRequest>._, A<CancellationToken>._))
+            .Throws(new Exception("This exception should not fail the message processing."));
 
         var config = new AppSettings();
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
 
         const long newUserId = 124L;
 
@@ -164,7 +159,7 @@ public class WelcomeServiceTests
         const long userId = 100L;
 
         var config = new AppSettings { DeleteJoinMessages = policy };
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock.Object);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
 
         await ProcessNewChatMember(welcomeService, userId, DateTime.UtcNow, joinMessageId: joinMessageId);
         await ProcessAnswer(welcomeService, successful);
