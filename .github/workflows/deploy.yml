@@ -12,16 +12,20 @@ jobs:
 
     steps:
       - name: Install GitVersion
-        uses: GitTools/actions/gitversion/setup@v0.9.11
+        uses: GitTools/actions/gitversion/setup@a41619580c25efb59dfc062e92990914141abcad # v0.10.2
         with:
           versionSpec: '5.5.0'
+
+      - uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        with:
+          dotnet-version: '3.1.x'
 
       - name: Set up Docker Buildx
         id:   buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
         with:
           fetch-depth: 0
 
@@ -33,7 +37,7 @@ jobs:
 
       - name: Run GitVersion
         id:   gitversion
-        uses: GitTools/actions/gitversion/execute@v0.9.11
+        uses: GitTools/actions/gitversion/execute@a41619580c25efb59dfc062e92990914141abcad # v0.10.2
 
       - name: Echo version
         run: echo ${{ steps.gitversion.outputs.majorMinorPatch }}
