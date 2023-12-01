@@ -82,10 +82,17 @@ public class WelcomeService : IWelcomeService
                 CanChangeInfo = preBanPermissions.CanChangeInfo ?? defaultPermissions?.CanChangeInfo ?? true,
                 CanInviteUsers = preBanPermissions.CanInviteUsers ?? defaultPermissions?.CanInviteUsers ?? true,
                 CanPinMessages = preBanPermissions.CanPinMessages ?? defaultPermissions?.CanPinMessages ?? true,
-                CanSendMediaMessages = preBanPermissions.CanSendMediaMessages ?? defaultPermissions?.CanSendMediaMessages ?? true,
                 CanSendMessages = preBanPermissions.CanSendMessages ?? defaultPermissions?.CanSendMessages ?? true,
                 CanSendOtherMessages = preBanPermissions.CanSendOtherMessages ?? defaultPermissions?.CanSendOtherMessages ?? true,
-                CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true
+                CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true,
+                CanManageTopics = preBanPermissions.CanManageTopics ?? defaultPermissions?.CanManageTopics ?? true,
+                CanSendAudios = preBanPermissions.CanSendAudios ?? defaultPermissions?.CanSendAudios ?? true,
+                CanSendDocuments = preBanPermissions.CanSendDocuments ?? defaultPermissions?.CanSendDocuments ?? true,
+                CanSendPhotos = preBanPermissions.CanSendPhotos ?? defaultPermissions?.CanSendPhotos ?? true,
+                CanSendVideos = preBanPermissions.CanSendVideos ?? defaultPermissions?.CanSendVideos ?? true,
+                CanSendVideoNotes = preBanPermissions.CanSendVideoNotes ?? defaultPermissions?.CanSendVideoNotes ?? true,
+                CanSendVoiceNotes = preBanPermissions.CanSendVoiceNotes ?? defaultPermissions?.CanSendVoiceNotes ?? true,
+
             };
 
             await _telegramBot.RestrictChatMemberAsync(
@@ -123,10 +130,16 @@ public class WelcomeService : IWelcomeService
             ChatMemberAdministrator chatMemberAdministrator => new ChatPermissions
             {
                 CanSendMessages = true,
-                CanSendMediaMessages = true,
+                CanSendAudios = true,
+                CanSendDocuments = true,
+                CanSendPhotos = true,
+                CanSendVideos = true,
+                CanSendVideoNotes = true,
+                CanSendVoiceNotes = true,
                 CanSendPolls = true,
                 CanSendOtherMessages = true,
                 CanAddWebPagePreviews = true,
+                CanManageTopics = chatMemberAdministrator.CanManageTopics,
                 CanChangeInfo = chatMemberAdministrator.CanChangeInfo,
                 CanInviteUsers = chatMemberAdministrator.CanInviteUsers,
                 CanPinMessages = chatMemberAdministrator.CanPinMessages
@@ -137,7 +150,13 @@ public class WelcomeService : IWelcomeService
             ChatMemberOwner _ => new ChatPermissions
             {
                 CanSendMessages = true,
-                CanSendMediaMessages = true,
+                CanManageTopics = true,
+                CanSendAudios = true,
+                CanSendDocuments = true,
+                CanSendPhotos = true,
+                CanSendVideos = true,
+                CanSendVideoNotes = true,
+                CanSendVoiceNotes = true,
                 CanSendPolls = true,
                 CanSendOtherMessages = true,
                 CanAddWebPagePreviews = true,
@@ -148,7 +167,13 @@ public class WelcomeService : IWelcomeService
             ChatMemberRestricted chatMemberRestricted => new ChatPermissions
             {
                 CanSendMessages = chatMemberRestricted.CanSendMessages,
-                CanSendMediaMessages = chatMemberRestricted.CanSendMediaMessages,
+                CanManageTopics = chatMemberRestricted.CanManageTopics,
+                CanSendAudios = chatMemberRestricted.CanSendAudios,
+                CanSendDocuments = chatMemberRestricted.CanSendDocuments,
+                CanSendPhotos = chatMemberRestricted.CanSendPhotos,
+                CanSendVideos = chatMemberRestricted.CanSendVideos,
+                CanSendVideoNotes = chatMemberRestricted.CanSendVideoNotes,
+                CanSendVoiceNotes = chatMemberRestricted.CanSendVoiceNotes,
                 CanSendPolls = chatMemberRestricted.CanSendPolls,
                 CanSendOtherMessages = chatMemberRestricted.CanSendOtherMessages,
                 CanAddWebPagePreviews = chatMemberRestricted.CanAddWebPagePreviews,
@@ -190,11 +215,18 @@ public class WelcomeService : IWelcomeService
                     CanChangeInfo = false,
                     CanInviteUsers = false,
                     CanPinMessages = false,
-                    CanSendMediaMessages = false,
+                    CanManageTopics = false,
+                    CanSendAudios = false,
+                    CanSendDocuments = false,
+                    CanSendPhotos = false,
+                    CanSendVideos = false,
+                    CanSendVideoNotes = false,
+                    CanSendVoiceNotes = false,
                     CanSendMessages = false,
                     CanSendOtherMessages = false,
                     CanSendPolls = false
                 },
+                true,
                 DateTime.Now.AddDays(1));
 
             var prettyUserName = GetPrettyName(unauthorizedUser);
