@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using CaptchaBot.Services.Translation;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -8,36 +9,27 @@ namespace CaptchaBot.Services;
 
 public class WelcomeService : IWelcomeService
 {
-    private static readonly string[] NumberTexts =
-    {
-        "ноль",
-        "один",
-        "два",
-        "три",
-        "четыре",
-        "пять",
-        "шесть",
-        "семь",
-        "восемь",
-    };
-
     private const int ButtonsCount = 8;
     private static readonly Random Random = new Random();
+
     private readonly AppSettings _settings;
     private readonly IUsersStore _usersStore;
     private readonly ILogger<WelcomeService> _logger;
     private readonly ITelegramBotClient _telegramBot;
+    private readonly ITranslationService _translationService;
 
     public WelcomeService(
         AppSettings settings,
         IUsersStore usersStore,
         ILogger<WelcomeService> logger,
-        ITelegramBotClient telegramBot)
+        ITelegramBotClient telegramBot,
+        ITranslationService translationService)
     {
         _settings = settings;
         _usersStore = usersStore;
         _logger = logger;
         _telegramBot = telegramBot;
+        _translationService = translationService;
     }
 
     public async Task ProcessCallback(CallbackQuery query)
@@ -234,7 +226,7 @@ public class WelcomeService : IWelcomeService
             var sentMessage = await _telegramBot
                 .SendTextMessageAsync(
                     message.Chat.Id,
-                    $"Привет, {prettyUserName}, нажми кнопку {GetText(answer)}, чтобы тебя не забанили!",
+                    _translationService.GetWelcomeMessage(prettyUserName, answer),
                     replyToMessageId: message.MessageId,
                     replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
@@ -247,8 +239,6 @@ public class WelcomeService : IWelcomeService
                 prettyUserName);
         }
     }
-
-    private static string GetText(in int answer) => NumberTexts[answer];
 
     private static string GetPrettyName(User messageNewChatMember)
     {

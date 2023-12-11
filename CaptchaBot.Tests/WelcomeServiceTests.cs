@@ -1,7 +1,9 @@
 using System.Globalization;
 using CaptchaBot.Services;
+using CaptchaBot.Services.Translation;
 using FakeItEasy;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Requests;
 using Telegram.Bot.Requests.Abstractions;
@@ -17,10 +19,13 @@ public class WelcomeServiceTests
     private readonly ITelegramBotClient _botMock;
     private readonly ILogger<WelcomeService> _logger;
     private readonly List<int> _deletedMessages = new();
+    private readonly TranslationService _translationService;
 
     public WelcomeServiceTests(ITestOutputHelper outputHelper)
     {
         _logger = outputHelper.BuildLoggerFor<WelcomeService>();
+        _translationService = new(Options.Create<TranslationSettings>(new()));
+        
         _botMock = A.Fake<ITelegramBotClient>();
         A.CallTo(() => _botMock.MakeRequestAsync(A<SendMessageRequest>._, A<CancellationToken>._))
             .Returns(new Message());
@@ -73,7 +78,7 @@ public class WelcomeServiceTests
     public async Task BotShouldProcessEventWithinTimeout()
     {
         var config = new AppSettings {ProcessEventTimeout = TimeSpan.FromSeconds(5.0)};
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock, _translationService);
 
         const long testUserId = 123L;
         await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow);
@@ -102,7 +107,7 @@ public class WelcomeServiceTests
     public async Task BotShouldNotProcessEventOutsideTimeout()
     {
         var config = new AppSettings {ProcessEventTimeout = TimeSpan.FromMinutes(5.0)};
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock, _translationService);
 
         const int testUserId = 345;
         await ProcessNewChatMember(welcomeService, testUserId, DateTime.UtcNow - TimeSpan.FromMinutes(6.0));
@@ -115,7 +120,7 @@ public class WelcomeServiceTests
     public async Task BotShouldRestrictTheEnteringUserAndNotTheMessageAuthor()
     {
         var config = new AppSettings();
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock, _translationService);
 
         const long enteringUserId = 123L;
         const long invitingUserId = 345L;
@@ -140,7 +145,7 @@ public class WelcomeServiceTests
             .Throws(new Exception("This exception should not fail the message processing."));
 
         var config = new AppSettings();
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock, _translationService);
 
         const long newUserId = 124L;
 
@@ -159,7 +164,7 @@ public class WelcomeServiceTests
         const long userId = 100L;
 
         var config = new AppSettings { DeleteJoinMessages = policy };
-        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock);
+        var welcomeService = new WelcomeService(config, _usersStore, _logger, _botMock, _translationService);
 
         await ProcessNewChatMember(welcomeService, userId, DateTime.UtcNow, joinMessageId: joinMessageId);
         await ProcessAnswer(welcomeService, successful);

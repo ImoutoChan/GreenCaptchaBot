@@ -5,12 +5,7 @@ namespace CaptchaBot.Services;
 
 public class UsersStore : IUsersStore
 {
-    private readonly ConcurrentDictionary<ChatUser, NewUser> _users;
-
-    public UsersStore()
-    {
-        _users = new ConcurrentDictionary<ChatUser, NewUser>();
-    }
+    private readonly ConcurrentDictionary<ChatUser, NewUser> _users = new();
 
     public void Add(
         User user,
@@ -34,10 +29,7 @@ public class UsersStore : IUsersStore
         _users.AddOrUpdate(key, newValue, (_, _) => newValue);
     }
 
-    public IReadOnlyCollection<NewUser> GetAll()
-    {
-        return _users.Values.ToArray();
-    }
+    public IReadOnlyCollection<NewUser> GetAll() => _users.Values.ToArray();
 
     public NewUser? Get(long chatId, long userId)
     {
