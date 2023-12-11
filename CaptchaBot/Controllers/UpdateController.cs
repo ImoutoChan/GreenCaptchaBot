@@ -6,7 +6,6 @@ using Telegram.Bot.Types.Enums;
 
 namespace CaptchaBot.Controllers;
 
-[Route("api/captchaupdate")]
 public class UpdateController : Controller
 {
     private readonly ITelegramBotClient _telegramBot;
@@ -24,7 +23,7 @@ public class UpdateController : Controller
     }
 
     // POST api/update
-    [HttpPost]
+    [HttpPost("api/{url}")]
     public async Task<IActionResult> Post([FromBody]Update update)
     {
         try
@@ -48,9 +47,9 @@ public class UpdateController : Controller
         return Ok();
     }
 
-    [HttpGet]
-    public IActionResult Get()
+    [HttpGet("api/{url}")]
+    public IActionResult Get(string url)
     {
-        return Ok("Ok!");
+        return Ok(url + " Ok!");
     }
 }
