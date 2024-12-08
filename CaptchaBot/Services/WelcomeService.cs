@@ -10,7 +10,7 @@ namespace CaptchaBot.Services;
 public class WelcomeService : IWelcomeService
 {
     private const int ButtonsCount = 8;
-    private static readonly Random Random = new Random();
+    private static readonly Random Random = new();
 
     private readonly AppSettings _settings;
     private readonly IUsersStore _usersStore;
@@ -48,7 +48,7 @@ public class WelcomeService : IWelcomeService
 
         if (unauthorizedUserAnswer != unauthorizedUser.CorrectAnswer)
         {
-            await _telegramBot.BanChatMemberAsync(
+            await _telegramBot.BanChatMember(
                 chatId,
                 query.From.Id,
                 DateTime.Now.AddDays(1));
@@ -66,28 +66,26 @@ public class WelcomeService : IWelcomeService
         {
             var preBanPermissions = GetPreBanPermissions(unauthorizedUser.ChatMember);
 
-            var defaultPermissions = (await _telegramBot.GetChatAsync(chatId)).Permissions;
-
             var postBanPermissions = new ChatPermissions
             {
-                CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews ?? defaultPermissions?.CanAddWebPagePreviews ?? true,
-                CanChangeInfo = preBanPermissions.CanChangeInfo ?? defaultPermissions?.CanChangeInfo ?? true,
-                CanInviteUsers = preBanPermissions.CanInviteUsers ?? defaultPermissions?.CanInviteUsers ?? true,
-                CanPinMessages = preBanPermissions.CanPinMessages ?? defaultPermissions?.CanPinMessages ?? true,
-                CanSendMessages = preBanPermissions.CanSendMessages ?? defaultPermissions?.CanSendMessages ?? true,
-                CanSendOtherMessages = preBanPermissions.CanSendOtherMessages ?? defaultPermissions?.CanSendOtherMessages ?? true,
-                CanSendPolls = preBanPermissions.CanSendPolls ?? defaultPermissions?.CanSendPolls ?? true,
-                CanManageTopics = preBanPermissions.CanManageTopics ?? defaultPermissions?.CanManageTopics ?? true,
-                CanSendAudios = preBanPermissions.CanSendAudios ?? defaultPermissions?.CanSendAudios ?? true,
-                CanSendDocuments = preBanPermissions.CanSendDocuments ?? defaultPermissions?.CanSendDocuments ?? true,
-                CanSendPhotos = preBanPermissions.CanSendPhotos ?? defaultPermissions?.CanSendPhotos ?? true,
-                CanSendVideos = preBanPermissions.CanSendVideos ?? defaultPermissions?.CanSendVideos ?? true,
-                CanSendVideoNotes = preBanPermissions.CanSendVideoNotes ?? defaultPermissions?.CanSendVideoNotes ?? true,
-                CanSendVoiceNotes = preBanPermissions.CanSendVoiceNotes ?? defaultPermissions?.CanSendVoiceNotes ?? true,
+                CanAddWebPagePreviews = preBanPermissions.CanAddWebPagePreviews,
+                CanChangeInfo = preBanPermissions.CanChangeInfo,
+                CanInviteUsers = preBanPermissions.CanInviteUsers,
+                CanPinMessages = preBanPermissions.CanPinMessages,
+                CanSendMessages = preBanPermissions.CanSendMessages,
+                CanSendOtherMessages = preBanPermissions.CanSendOtherMessages,
+                CanSendPolls = preBanPermissions.CanSendPolls,
+                CanManageTopics = preBanPermissions.CanManageTopics,
+                CanSendAudios = preBanPermissions.CanSendAudios,
+                CanSendDocuments = preBanPermissions.CanSendDocuments,
+                CanSendPhotos = preBanPermissions.CanSendPhotos,
+                CanSendVideos = preBanPermissions.CanSendVideos,
+                CanSendVideoNotes = preBanPermissions.CanSendVideoNotes,
+                CanSendVoiceNotes = preBanPermissions.CanSendVoiceNotes
 
             };
 
-            await _telegramBot.RestrictChatMemberAsync(
+            await _telegramBot.RestrictChatMember(
                 chatId,
                 query.From.Id,
                 postBanPermissions);
@@ -103,13 +101,13 @@ public class WelcomeService : IWelcomeService
         }
 
         await InvokeSafely(async () =>
-            await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId));
+            await _telegramBot.DeleteMessage(unauthorizedUser.ChatId, unauthorizedUser.InviteMessageId));
 
         if (_settings.DeleteJoinMessages == JoinMessageDeletePolicy.All
             || _settings.DeleteJoinMessages == JoinMessageDeletePolicy.Unsuccessful && !authorizationSuccess)
         {
             await InvokeSafely(async () =>
-                await _telegramBot.DeleteMessageAsync(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId));
+                await _telegramBot.DeleteMessage(unauthorizedUser.ChatId, unauthorizedUser.JoinMessageId));
         }
 
         _usersStore.Remove(unauthorizedUser);
@@ -184,21 +182,21 @@ public class WelcomeService : IWelcomeService
         {
             _logger.LogWarning(
                 "Message about {NewChatMembers} received {Freshness} ago and ignored",
-                GetPrettyNames(message.NewChatMembers ?? Array.Empty<User>()),
+                GetPrettyNames(message.NewChatMembers ?? []),
                 freshness);
             return;
         }
 
-        foreach (var unauthorizedUser in message.NewChatMembers ?? Array.Empty<User>())
+        foreach (var unauthorizedUser in message.NewChatMembers ?? [])
         {
             var answer = GetRandomNumber();
 
-            var chatUser = await _telegramBot.GetChatMemberAsync(message.Chat.Id, unauthorizedUser.Id);
+            var chatUser = await _telegramBot.GetChatMember(message.Chat.Id, unauthorizedUser.Id);
 
             if (chatUser == null || chatUser.Status == ChatMemberStatus.Left)
                 return;
 
-            await _telegramBot.RestrictChatMemberAsync(
+            await _telegramBot.RestrictChatMember(
                 message.Chat.Id,
                 unauthorizedUser.Id,
                 new ChatPermissions
@@ -224,10 +222,10 @@ public class WelcomeService : IWelcomeService
             var prettyUserName = GetPrettyName(unauthorizedUser);
 
             var sentMessage = await _telegramBot
-                .SendTextMessageAsync(
+                .SendMessage(
                     message.Chat.Id,
                     _translationService.GetWelcomeMessage(prettyUserName, answer),
-                    replyToMessageId: message.MessageId,
+                    replyParameters: message.MessageId,
                     replyMarkup: new InlineKeyboardMarkup(GetKeyboardButtons()));
 
             _usersStore.Add(unauthorizedUser, message, sentMessage.MessageId, prettyUserName, answer, chatUser);

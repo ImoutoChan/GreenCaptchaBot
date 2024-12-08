@@ -46,10 +46,9 @@ public class BanHostedService : IHostedService
 
         foreach (var newUser in usersToBan)
         {
-            await InvokeSafely(() =>
-                _telegramBot.BanChatMemberAsync(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1)));
-            await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.InviteMessageId));
-            await InvokeSafely(() => _telegramBot.DeleteMessageAsync(newUser.ChatId, newUser.JoinMessageId));
+            await InvokeSafely(() => _telegramBot.BanChatMember(newUser.ChatId, newUser.Id, DateTime.Now.AddDays(1)));
+            await InvokeSafely(() => _telegramBot.DeleteMessage(newUser.ChatId, newUser.InviteMessageId));
+            await InvokeSafely(() => _telegramBot.DeleteMessage(newUser.ChatId, newUser.JoinMessageId));
             _usersStore.Remove(newUser);
 
             _logger.LogInformation(

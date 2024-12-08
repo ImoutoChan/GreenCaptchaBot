@@ -20,14 +20,13 @@ public static class StartupExtensions
                 async Task ResetWebHook()
                 {
                     logger.LogInformation("Removing webhook");
-                    await services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync();
+                    await services.GetRequiredService<ITelegramBotClient>().DeleteWebhook();
 
                     logger.LogInformation($"Setting webhook to {address}");
-                    await services.GetRequiredService<ITelegramBotClient>()
-                        .SetWebhookAsync(address, maxConnections: 5);
+                    await services.GetRequiredService<ITelegramBotClient>().SetWebhook(address, maxConnections: 5);
                     logger.LogInformation($"Webhook is set to {address}");
 
-                    var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfoAsync();
+                    var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfo();
                     logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
                 }
 
@@ -39,7 +38,7 @@ public static class StartupExtensions
             {
                 var logger = services.GetRequiredService<ILogger<Startup>>();
 
-                services.GetRequiredService<ITelegramBotClient>().DeleteWebhookAsync().Wait();
+                services.GetRequiredService<ITelegramBotClient>().DeleteWebhook().Wait();
                 logger.LogInformation("Webhook removed");
             });
 

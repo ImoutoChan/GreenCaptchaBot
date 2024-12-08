@@ -28,7 +28,7 @@ public class UpdateController : Controller
     {
         try
         {
-            if (update?.Message?.Type == MessageType.ChatMembersAdded)
+            if (update?.Message?.Type == MessageType.NewChatMembers)
             {
                 await _welcomeService.ProcessNewChatMember(update.Message);
             }
@@ -36,7 +36,7 @@ public class UpdateController : Controller
             if (update?.Type == UpdateType.CallbackQuery)
             {
                 await _welcomeService.ProcessCallback(update.CallbackQuery!);
-                await _telegramBot.AnswerCallbackQueryAsync(update.CallbackQuery!.Id);
+                await _telegramBot.AnswerCallbackQuery(update.CallbackQuery!.Id);
             }
         }
         catch (Exception e)
