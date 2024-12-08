@@ -24,7 +24,7 @@ public class UpdateController : Controller
 
     // POST api/update
     [HttpPost("api/{url}")]
-    public async Task<IActionResult> Post([FromBody]Update update)
+    public async Task<IActionResult> Post([FromBody] Update update)
     {
         try
         {

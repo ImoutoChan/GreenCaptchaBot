@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json;
 using Telegram.Bot;
 
 namespace CaptchaBot;
@@ -27,7 +27,7 @@ public static class StartupExtensions
                     logger.LogInformation($"Webhook is set to {address}");
 
                     var webhookInfo = await services.GetRequiredService<ITelegramBotClient>().GetWebhookInfo();
-                    logger.LogInformation($"Webhook info: {JsonConvert.SerializeObject(webhookInfo)}");
+                    logger.LogInformation($"Webhook info: {JsonSerializer.Serialize(webhookInfo)}");
                 }
 
                 _ = ResetWebHook();
